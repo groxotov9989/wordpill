@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WordPill</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --tg-theme-bg-color: #ffffff;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #999999;
+            --tg-theme-link-color: #2481cc;
+            --tg-theme-button-color: #2481cc;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #f0f0f0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            background: var(--tg-theme-bg-color);
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .header-stats {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color);
+            margin-top: 4px;
+        }
+        
+        /* Navigation */
+        .nav {
+            display: flex;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--tg-theme-secondary-bg-color);
+            overflow-x: auto;
+        }
+        
+        .nav-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        
+        .nav-btn.active {
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+        }
+        
+        /* Screens */
+        .screen {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Word List */
+        .word-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .word-item {
+            background: var(--tg-theme-secondary-bg-color);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+        }
+        
+        .word-item-en {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .word-item-ru {
+            font-size: 15px;
+            color: var(--tg-theme-hint-color);
+        }
+        
+        .word-item-stats {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 12px;
+            color: var(--tg-theme-hint-color);
+        }
+        
+        .word-item-delete {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #ff3b30;
+            font-size: 13px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--tg-theme-hint-color);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        /* Add Form */
+        .add-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .input-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--tg-theme-hint-color);
+        }
+        
+        .input-group input {
+            padding: 14px 16px;
+            border: 2px solid var(--tg-theme-secondary-bg-color);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            transition: border-color 0.2s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color);
+        }
+        
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+        }
+        
+        .btn-secondary {
+            background: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Flashcards */
+        .cards-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .card-progress {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color);
+            margin-bottom: 20px;
+        }
+        
+        .flashcard {
+            width: 100%;
+            max-width: 340px;
+            min-height: 220px;
+            background: linear-gradient(145deg, var(--tg-theme-button-color), #1a6bb5);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        
+        .flashcard:active {
+            transform: scale(0.98);
+        }
+        
+        .flashcard-word {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .flashcard-translation {
+            font-size: 20px;
+            opacity: 0.9;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            width: 100%;
+        }
+        
+        .flashcard-hint {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-top: 16px;
+        }
+        
+        .card-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            width: 100%;
+            max-width: 340px;
+        }
+        
+        .card-btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        .card-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .card-btn-wrong {
+            background: #ff3b30;
+            color: white;
+        }
+        
+        .card-btn-correct {
+            background: #34c759;
+            color: white;
+        }
+        
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: var(--tg-theme-secondary-bg-color);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--tg-theme-button-color);
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color);
+            margin-top: 4px;
+        }
+        
+        .stat-card.success .stat-value { color: #34c759; }
+        .stat-card.warning .stat-value { color: #ff9500; }
+        .stat-card.danger .stat-value { color: #ff3b30; }
+        
+        /* Session Results */
+        .session-results {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .session-results-icon {
+            font-size: 72px;
+            margin-bottom: 16px;
+        }
+        
+        .session-results h2 {
+            font-size: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .session-stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+        
+        .session-stat {
+            text-align: center;
+        }
+        
+        .session-stat-value {
+            font-size: 36px;
+            font-weight: 700;
+        }
+        
+        .session-stat-value.correct { color: #34c759; }
+        .session-stat-value.wrong { color: #ff3b30; }
+        
+        .session-stat-label {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color);
+        }
+        
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+        
+        .fab:active {
+            transform: scale(0.9);
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💊 WordPill</h1>
+        <div class="header-stats" id="headerStats">Загрузка...</div>
+    </div>
+    
+    <nav class="nav">
+        <button class="nav-btn active" data-screen="words">📚 Слова</button>
+        <button class="nav-btn" data-screen="cards">🎴 Карточки</button>
+        <button class="nav-btn" data-screen="stats">📊 Статистика</button>
+    </nav>
+    
+    <!-- Words Screen -->
+    <div class="screen active" id="screen-words">
+        <div class="word-list" id="wordList"></div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-state-icon">📚</div>
+            <div class="empty-state-text">Словарик пуст<br>Добавь первое слово!</div>
+            <button class="btn btn-primary" onclick="showScreen('add')">+ Добавить слово</button>
+        </div>
+    </div>
+    
+    <!-- Add Screen -->
+    <div class="screen" id="screen-add">
+        <form class="add-form" id="addForm">
+            <div class="input-group">
+                <label>Слово на английском</label>
+                <input type="text" id="inputWord" placeholder="например: auscultation" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label>Перевод / определение</label>
+                <input type="text" id="inputTranslation" placeholder="например: аускультация" autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+            <button type="button" class="btn btn-secondary" onclick="showScreen('words')">Отмена</button>
+        </form>
+    </div>
+    
+    <!-- Cards Screen -->
+    <div class="screen" id="screen-cards">
+        <div class="cards-container" id="cardsContainer">
+            <div class="empty-state">
+                <div class="empty-state-icon">🎴</div>
+                <div class="empty-state-text">Добавь минимум 2 слова<br>для режима карточек</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Screen -->
+    <div class="screen" id="screen-stats">
+        <div class="stats-grid" id="statsGrid"></div>
+    </div>
+    
+    <!-- FAB -->
+    <button class="fab" id="fab" onclick="showScreen('add')">+</button>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Initialize Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // Apply Telegram theme
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
+        document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#2481cc');
+        document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc');
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f0f0f0');
+        
+        // State
+        let words = [];
+        let currentSession = null;
+        
+        // Storage helpers (with fallback for testing outside Telegram)
+        const storage = {
+            async get(key) {
+                return new Promise((resolve) => {
+                    if (tg.CloudStorage) {
+                        tg.CloudStorage.getItem(key, (err, value) => {
+                            resolve(value ? JSON.parse(value) : null);
+                        });
+                    } else {
+                        const value = localStorage.getItem(key);
+                        resolve(value ? JSON.parse(value) : null);
+                    }
+                });
+            },
+            async set(key, value) {
+                return new Promise((resolve) => {
+                    const json = JSON.stringify(value);
+                    if (tg.CloudStorage) {
+                        tg.CloudStorage.setItem(key, json, () => resolve());
+                    } else {
+                        localStorage.setItem(key, json);
+                        resolve();
+                    }
+                });
+            }
+        };
+        
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+        
+        // Navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => showScreen(btn.dataset.screen));
+        });
+        
+        function showScreen(screenId) {
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.screen === screenId);
+            });
+            
+            // Update screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.toggle('active', screen.id === `screen-${screenId}`);
+            });
+            
+            // Show/hide FAB
+            document.getElementById('fab').style.display = 
+                (screenId === 'words' || screenId === 'add') ? 'block' : 'none';
+            
+            // Load screen content
+            if (screenId === 'words') renderWordList();
+            if (screenId === 'cards') initCards();
+            if (screenId === 'stats') renderStats();
+        }
+        
+        // Word List
+        function renderWordList() {
+            const list = document.getElementById('wordList');
+            const empty = document.getElementById('emptyState');
+            
+            if (words.length === 0) {
+                list.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            list.style.display = 'flex';
+            empty.style.display = 'none';
+            
+            list.innerHTML = words.map((word, index) => {
+                const total = word.correct + word.wrong;
+                const rate = total > 0 ? Math.round(word.correct / total * 100) : 0;
+                const indicator = total === 0 ? '🆕' : rate >= 80 ? '✅' : rate >= 50 ? '🔶' : '🔴';
+                
+                return `
+                    <div class="word-item">
+                        <div class="word-item-en">${escapeHtml(word.word)}</div>
+                        <div class="word-item-ru">${escapeHtml(word.translation)}</div>
+                        <div class="word-item-stats">${indicator} ${total > 0 ? rate + '%' : ''}</div>
+                        <button class="word-item-delete" onclick="deleteWord(${index})">Удалить</button>
+                    </div>
+                `;
+            }).join('');
+            
+            updateHeaderStats();
+        }
+        
+        function updateHeaderStats() {
+            const total = words.length;
+            const mastered = words.filter(w => {
+                const t = w.correct + w.wrong;
+                return t > 0 && (w.correct / t) >= 0.8;
+            }).length;
+            
+            document.getElementById('headerStats').textContent = 
+                total === 0 ? 'Добавь первое слово →' : 
+                `${total} слов · ${mastered} выучено`;
+        }
+        
+        // Add Word
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const wordInput = document.getElementById('inputWord');
+            const translationInput = document.getElementById('inputTranslation');
+            
+            const word = wordInput.value.trim();
+            const translation = translationInput.value.trim();
+            
+            if (!word || !translation) {
+                showToast('Заполни оба поля');
+                return;
+            }
+            
+            words.unshift({
+                word,
+                translation,
+                correct: 0,
+                wrong: 0,
+                created: Date.now()
+            });
+            
+            await storage.set('words', words);
+            
+            wordInput.value = '';
+            translationInput.value = '';
+            
+            showToast('✅ Слово добавлено!');
+            tg.HapticFeedback.impactOccurred('light');
+            
+            showScreen('words');
+        });
+        
+        // Delete Word
+        async function deleteWord(index) {
+            if (confirm('Удалить это слово?')) {
+                words.splice(index, 1);
+                await storage.set('words', words);
+                renderWordList();
+                showToast('🗑 Удалено');
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+        }
+        
+        // Flashcards
+        function initCards() {
+            const container = document.getElementById('cardsContainer');
+            
+            if (words.length < 2) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎴</div>
+                        <div class="empty-state-text">Добавь минимум 2 слова<br>для режима карточек</div>
+                        <button class="btn btn-primary" onclick="showScreen('add')">+ Добавить</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Start new session
+            currentSession = {
+                cards: [...words].sort(() => Math.random() - 0.5),
+                index: 0,
+                correct: 0,
+                wrong: 0,
+                revealed: false
+            };
+            
+            renderCard();
+        }
+        
+        function renderCard() {
+            const container = document.getElementById('cardsContainer');
+            const session = currentSession;
+            
+            if (!session) return;
+            
+            // Session complete
+            if (session.index >= session.cards.length) {
+                const total = session.correct + session.wrong;
+                const rate = Math.round(session.correct / total * 100);
+                const emoji = rate >= 80 ? '🎉' : rate >= 50 ? '👍' : '💪';
+                
+                container.innerHTML = `
+                    <div class="session-results">
+                        <div class="session-results-icon">${emoji}</div>
+                        <h2>Сессия завершена!</h2>
+                        <div class="session-stats">
+                            <div class="session-stat">
+                                <div class="session-stat-value correct">${session.correct}</div>
+                                <div class="session-stat-label">Знал</div>
+                            </div>
+                            <div class="session-stat">
+                                <div class="session-stat-value wrong">${session.wrong}</div>
+                                <div class="session-stat-label">Не знал</div>
+                            </div>
+                        </div>
+                        <p style="color: var(--tg-theme-hint-color); margin-bottom: 24px;">
+                            Результат: ${rate}%
+                        </p>
+                        <button class="btn btn-primary" onclick="initCards()">🔄 Ещё раз</button>
+                        <button class="btn btn-secondary" style="margin-top: 12px;" onclick="showScreen('words')">К словам</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const card = session.cards[session.index];
+            
+            container.innerHTML = `
+                <div class="card-progress">Карточка ${session.index + 1} из ${session.cards.length}</div>
+                <div class="flashcard" onclick="revealCard()">
+                    <div class="flashcard-word">${escapeHtml(card.word)}</div>
+                    ${session.revealed ? `
+                        <div class="flashcard-translation">${escapeHtml(card.translation)}</div>
+                    ` : `
+                        <div class="flashcard-hint">Нажми, чтобы увидеть ответ</div>
+                    `}
+                </div>
+                ${session.revealed ? `
+                    <div class="card-buttons">
+                        <button class="card-btn card-btn-wrong" onclick="answerCard(false)">❌ Не знал</button>
+                        <button class="card-btn card-btn-correct" onclick="answerCard(true)">✅ Знал</button>
+                    </div>
+                ` : ''}
+            `;
+        }
+        
+        function revealCard() {
+            if (currentSession && !currentSession.revealed) {
+                currentSession.revealed = true;
+                tg.HapticFeedback.impactOccurred('light');
+                renderCard();
+            }
+        }
+        
+        async function answerCard(correct) {
+            if (!currentSession) return;
+            
+            const card = currentSession.cards[currentSession.index];
+            
+            // Update stats
+            if (correct) {
+                currentSession.correct++;
+                card.correct++;
+            } else {
+                currentSession.wrong++;
+                card.wrong++;
+            }
+            
+            // Save to storage
+            const wordIndex = words.findIndex(w => w.word === card.word && w.translation === card.translation);
+            if (wordIndex !== -1) {
+                words[wordIndex] = card;
+                await storage.set('words', words);
+            }
+            
+            // Next card
+            currentSession.index++;
+            currentSession.revealed = false;
+            
+            tg.HapticFeedback.impactOccurred(correct ? 'light' : 'medium');
+            renderCard();
+        }
+        
+        // Stats
+        function renderStats() {
+            const grid = document.getElementById('statsGrid');
+            
+            const totalWords = words.length;
+            const totalCorrect = words.reduce((sum, w) => sum + w.correct, 0);
+            const totalWrong = words.reduce((sum, w) => sum + w.wrong, 0);
+            const totalAnswers = totalCorrect + totalWrong;
+            const successRate = totalAnswers > 0 ? Math.round(totalCorrect / totalAnswers * 100) : 0;
+            const mastered = words.filter(w => {
+                const t = w.correct + w.wrong;
+                return t > 0 && (w.correct / t) >= 0.8;
+            }).length;
+            
+            grid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalWords}</div>
+                    <div class="stat-label">Всего слов</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${mastered}</div>
+                    <div class="stat-label">Выучено</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${totalCorrect}</div>
+                    <div class="stat-label">Правильных</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value">${totalWrong}</div>
+                    <div class="stat-label">Ошибок</div>
+                </div>
+                <div class="stat-card" style="grid-column: span 2;">
+                    <div class="stat-value" style="color: ${successRate >= 70 ? '#34c759' : successRate >= 40 ? '#ff9500' : '#ff3b30'}">
+                        ${successRate}%
+                    </div>
+                    <div class="stat-label">Общий результат</div>
+                </div>
+            `;
+        }
+        
+        // Helpers
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Init
+        async function init() {
+            words = await storage.get('words') || [];
+            renderWordList();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
