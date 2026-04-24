@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,15 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WordPill</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --tg-theme-bg-color: #ffffff;
-            --tg-theme-text-color: #000000;
-            --tg-theme-hint-color: #999999;
-            --tg-theme-link-color: #2481cc;
-            --tg-theme-button-color: #2481cc;
-            --tg-theme-button-text-color: #ffffff;
-            --tg-theme-secondary-bg-color: #f0f0f0;
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #141416;
+            --bg-tertiary: #1c1c1f;
+            --bg-card: #1a1a1d;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-tertiary: rgba(255, 255, 255, 0.4);
+            --accent: #6366f1;
+            --accent-soft: rgba(99, 102, 241, 0.15);
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.15);
+            --warning: #f59e0b;
+            --warning-soft: rgba(245, 158, 11, 0.15);
+            --danger: #ef4444;
+            --danger-soft: rgba(239, 68, 68, 0.15);
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 40px var(--accent-glow);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
         * {
@@ -25,143 +48,279 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
+            font-family: 'Outfit', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding-bottom: 80px;
+            overflow-x: hidden;
+            letter-spacing: -0.01em;
         }
         
-        /* Header */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 0%, var(--accent-soft) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
         .header {
-            padding: 16px 20px;
-            background: var(--tg-theme-bg-color);
-            border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            padding: 20px 20px 12px;
         }
         
-        .header h1 {
-            font-size: 24px;
-            font-weight: 700;
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #818cf8);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .logo-text {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
         }
         
         .header-stats {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color);
-            margin-top: 4px;
+            font-size: 13px;
+            color: var(--text-tertiary);
         }
         
-        /* Navigation */
         .nav {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             padding: 12px 20px;
-            background: var(--tg-theme-secondary-bg-color);
             overflow-x: auto;
+            scrollbar-width: none;
         }
         
+        .nav::-webkit-scrollbar { display: none; }
+        
         .nav-btn {
-            padding: 8px 16px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 20px;
-            background: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
+            border-radius: var(--radius-full);
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        
-        .nav-btn.active {
-            background: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
-        }
-        
-        /* Screens */
-        .screen {
-            display: none;
-            padding: 20px;
-            animation: fadeIn 0.2s ease;
-        }
-        
-        .screen.active {
-            display: block;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Word List */
-        .word-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .word-item {
-            background: var(--tg-theme-secondary-bg-color);
-            border-radius: 12px;
-            padding: 16px;
+            transition: all 0.3s var(--ease-out);
             position: relative;
         }
         
+        .nav-btn.active {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+        
+        .nav-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+        
+        .screen {
+            display: none;
+            padding: 16px 20px 120px;
+            animation: fadeIn 0.4s var(--ease-out);
+        }
+        
+        .screen.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .word-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .word-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            position: relative;
+            transition: all 0.3s var(--ease-out);
+            animation: slideIn 0.4s var(--ease-out) backwards;
+        }
+        
+        .word-item:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-16px); }
+        }
+        
+        .word-item:nth-child(1) { animation-delay: 0.02s; }
+        .word-item:nth-child(2) { animation-delay: 0.04s; }
+        .word-item:nth-child(3) { animation-delay: 0.06s; }
+        .word-item:nth-child(4) { animation-delay: 0.08s; }
+        .word-item:nth-child(5) { animation-delay: 0.1s; }
+        .word-item:nth-child(6) { animation-delay: 0.12s; }
+        .word-item:nth-child(7) { animation-delay: 0.14s; }
+        .word-item:nth-child(8) { animation-delay: 0.16s; }
+        
+        .word-item-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        
+        .word-item-text { flex: 1; min-width: 0; }
+        
         .word-item-en {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 600;
             margin-bottom: 4px;
         }
         
         .word-item-ru {
-            font-size: 15px;
-            color: var(--tg-theme-hint-color);
+            font-size: 14px;
+            color: var(--text-secondary);
         }
         
-        .word-item-stats {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            font-size: 12px;
-            color: var(--tg-theme-hint-color);
+        .word-item-badge {
+            flex-shrink: 0;
+            padding: 5px 10px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
+        
+        .word-item-badge.new { background: var(--accent-soft); color: var(--accent); }
+        .word-item-badge.mastered { background: var(--success-soft); color: var(--success); }
+        .word-item-badge.learning { background: var(--warning-soft); color: var(--warning); }
+        .word-item-badge.weak { background: var(--danger-soft); color: var(--danger); }
         
         .word-item-delete {
             position: absolute;
-            bottom: 12px;
-            right: 12px;
+            bottom: 10px;
+            right: 16px;
             background: none;
             border: none;
-            color: #ff3b30;
-            font-size: 13px;
+            color: var(--text-tertiary);
+            font-family: inherit;
+            font-size: 12px;
             cursor: pointer;
-            opacity: 0.7;
+            opacity: 0;
+            transition: all 0.2s;
         }
+        
+        .word-item:hover .word-item-delete { opacity: 1; }
+        .word-item-delete:hover { color: var(--danger); }
         
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: var(--tg-theme-hint-color);
+            padding: 48px 20px;
+            animation: fadeIn 0.5s var(--ease-out);
         }
         
         .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
+            width: 80px;
+            height: 80px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 20px;
+            border: 1px solid var(--border);
+        }
+        
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
         
         .empty-state-text {
-            font-size: 16px;
-            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
         }
         
-        /* Add Form */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out);
+        }
+        
+        .btn:active { transform: scale(0.97); }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #818cf8);
+            color: white;
+            box-shadow: var(--shadow-sm), 0 0 24px var(--accent-glow);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: var(--shadow-md), 0 0 32px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover { background: var(--bg-card); }
+        .btn-block { width: 100%; }
+        
         .add-form {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
         }
         
         .input-group {
@@ -171,179 +330,199 @@
         }
         
         .input-group label {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--tg-theme-hint-color);
-        }
-        
-        .input-wrapper {
-            position: relative;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         
         .input-group input {
             width: 100%;
-            padding: 14px 16px;
-            border: 2px solid var(--tg-theme-secondary-bg-color);
-            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-family: inherit;
             font-size: 16px;
-            background: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
-            transition: border-color 0.2s;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.2s var(--ease-out);
         }
+        
+        .input-group input::placeholder { color: var(--text-tertiary); }
         
         .input-group input:focus {
             outline: none;
-            border-color: var(--tg-theme-button-color);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
         }
         
-        .btn {
-            padding: 14px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-        }
-        
-        .btn:active {
-            transform: scale(0.98);
-        }
-        
-        .btn-primary {
-            background: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
-        }
-        
-        .btn-secondary {
-            background: var(--tg-theme-secondary-bg-color);
-            color: var(--tg-theme-text-color);
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Translation Suggestion */
         .translation-suggestion {
             display: none;
             margin-top: 8px;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, rgba(36, 129, 204, 0.1), rgba(36, 129, 204, 0.05));
-            border: 1px dashed var(--tg-theme-button-color);
-            border-radius: 10px;
+            padding: 14px;
+            background: var(--accent-soft);
+            border: 1px dashed rgba(99, 102, 241, 0.4);
+            border-radius: var(--radius-md);
             cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .translation-suggestion:active {
-            transform: scale(0.98);
-            background: linear-gradient(135deg, rgba(36, 129, 204, 0.2), rgba(36, 129, 204, 0.1));
-        }
-        
-        .translation-suggestion.visible {
-            display: block;
-            animation: slideDown 0.2s ease;
+            transition: all 0.2s var(--ease-out);
+            animation: slideDown 0.3s var(--ease-spring);
         }
         
         @keyframes slideDown {
             from { opacity: 0; transform: translateY(-8px); }
-            to { opacity: 1; transform: translateY(0); }
         }
+        
+        .translation-suggestion.visible { display: block; }
+        .translation-suggestion:active { transform: scale(0.98); }
         
         .suggestion-label {
             font-size: 11px;
-            color: var(--tg-theme-hint-color);
-            margin-bottom: 4px;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
         }
         
         .suggestion-text {
             font-size: 16px;
-            color: var(--tg-theme-button-color);
+            color: var(--accent);
             font-weight: 500;
         }
         
         .suggestion-hint {
             font-size: 11px;
-            color: var(--tg-theme-hint-color);
-            margin-top: 6px;
+            color: var(--text-tertiary);
+            margin-top: 8px;
         }
         
         .translation-loading {
             display: none;
-            margin-top: 8px;
+            padding: 8px 0;
             font-size: 13px;
-            color: var(--tg-theme-hint-color);
+            color: var(--text-tertiary);
+            align-items: center;
+            gap: 8px;
         }
         
-        .translation-loading.visible {
-            display: block;
+        .translation-loading.visible { display: flex; }
+        
+        .loading-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
         
-        /* Flashcards */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
         .cards-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 0;
+            padding: 16px 0;
         }
         
         .card-progress {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color);
-            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+        
+        .card-progress-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .card-progress-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        
+        .card-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #818cf8);
+            border-radius: var(--radius-full);
+            transition: width 0.4s var(--ease-out);
         }
         
         .flashcard {
             width: 100%;
             max-width: 340px;
-            min-height: 220px;
-            background: linear-gradient(145deg, var(--tg-theme-button-color), #1a6bb5);
-            border-radius: 20px;
+            min-height: 260px;
+            background: linear-gradient(165deg, var(--bg-tertiary) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 30px;
-            color: white;
+            padding: 32px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.3s;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            transition: all 0.3s var(--ease-out);
+            position: relative;
+            overflow: hidden;
         }
         
-        .flashcard:active {
-            transform: scale(0.98);
+        .flashcard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.6;
         }
+        
+        .flashcard:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        .flashcard:active { transform: scale(0.98); }
         
         .flashcard-word {
             font-size: 28px;
             font-weight: 700;
-            margin-bottom: 8px;
+            letter-spacing: -0.02em;
         }
         
         .flashcard-translation {
             font-size: 20px;
-            opacity: 0.9;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.3);
+            color: var(--text-secondary);
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
             width: 100%;
+            animation: revealAnswer 0.4s var(--ease-spring);
+        }
+        
+        @keyframes revealAnswer {
+            from { opacity: 0; transform: translateY(10px); }
         }
         
         .flashcard-hint {
             font-size: 13px;
-            opacity: 0.7;
-            margin-top: 16px;
+            color: var(--text-tertiary);
+            margin-top: 24px;
         }
         
         .card-buttons {
             display: flex;
-            gap: 12px;
-            margin-top: 24px;
+            gap: 10px;
+            margin-top: 20px;
             width: 100%;
             max-width: 340px;
         }
@@ -352,235 +531,288 @@
             flex: 1;
             padding: 16px;
             border: none;
-            border-radius: 12px;
+            border-radius: var(--radius-md);
+            font-family: inherit;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: all 0.2s var(--ease-out);
         }
         
-        .card-btn:active {
-            transform: scale(0.95);
-        }
+        .card-btn:active { transform: scale(0.95); }
         
         .card-btn-wrong {
-            background: #ff3b30;
-            color: white;
+            background: var(--danger-soft);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
+        
+        .card-btn-wrong:hover { background: rgba(239, 68, 68, 0.2); }
         
         .card-btn-correct {
-            background: #34c759;
-            color: white;
+            background: var(--success-soft);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
         
-        /* Stats */
+        .card-btn-correct:hover { background: rgba(16, 185, 129, 0.2); }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
+            gap: 10px;
         }
         
         .stat-card {
-            background: var(--tg-theme-secondary-bg-color);
-            border-radius: 16px;
-            padding: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px 16px;
             text-align: center;
+            animation: fadeIn 0.4s var(--ease-out) backwards;
         }
+        
+        .stat-card:nth-child(1) { animation-delay: 0.02s; }
+        .stat-card:nth-child(2) { animation-delay: 0.04s; }
+        .stat-card:nth-child(3) { animation-delay: 0.06s; }
+        .stat-card:nth-child(4) { animation-delay: 0.08s; }
+        .stat-card:nth-child(5) { animation-delay: 0.1s; }
         
         .stat-value {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 700;
-            color: var(--tg-theme-button-color);
+            letter-spacing: -0.02em;
         }
+        
+        .stat-card.accent .stat-value { color: var(--accent); }
+        .stat-card.success .stat-value { color: var(--success); }
+        .stat-card.danger .stat-value { color: var(--danger); }
         
         .stat-label {
-            font-size: 13px;
-            color: var(--tg-theme-hint-color);
+            font-size: 11px;
+            color: var(--text-tertiary);
             margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         
-        .stat-card.success .stat-value { color: #34c759; }
-        .stat-card.warning .stat-value { color: #ff9500; }
-        .stat-card.danger .stat-value { color: #ff3b30; }
+        .stat-card.wide { grid-column: span 2; }
         
-        /* Session Results */
         .session-results {
             text-align: center;
-            padding: 40px 20px;
+            padding: 32px 0;
+            animation: fadeIn 0.5s var(--ease-out);
         }
         
         .session-results-icon {
             font-size: 72px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
+            animation: bounce 0.6s var(--ease-spring);
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
         }
         
         .session-results h2 {
-            font-size: 24px;
+            font-size: 26px;
+            font-weight: 700;
             margin-bottom: 24px;
         }
         
         .session-stats {
             display: flex;
             justify-content: center;
-            gap: 32px;
-            margin-bottom: 32px;
-        }
-        
-        .session-stat {
-            text-align: center;
+            gap: 40px;
+            margin-bottom: 24px;
         }
         
         .session-stat-value {
-            font-size: 36px;
+            font-size: 40px;
             font-weight: 700;
         }
         
-        .session-stat-value.correct { color: #34c759; }
-        .session-stat-value.wrong { color: #ff3b30; }
+        .session-stat-value.correct { color: var(--success); }
+        .session-stat-value.wrong { color: var(--danger); }
         
         .session-stat-label {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color);
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
         
-        /* FAB */
+        .session-percent {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+        
         .fab {
             position: fixed;
             bottom: 24px;
             right: 24px;
-            width: 56px;
-            height: 56px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            background: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
+            background: linear-gradient(135deg, var(--accent), #818cf8);
+            color: white;
             border: none;
-            font-size: 28px;
+            font-size: 26px;
             cursor: pointer;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
+            box-shadow: var(--shadow-md), var(--shadow-glow);
+            transition: all 0.3s var(--ease-out);
             z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        .fab:active {
-            transform: scale(0.9);
+        .fab:hover {
+            transform: scale(1.08);
+            box-shadow: var(--shadow-lg), 0 0 48px var(--accent-glow);
         }
         
-        /* Toast */
+        .fab:active { transform: scale(0.95); }
+        
+        .fab svg { width: 26px; height: 26px; }
+        
         .toast {
             position: fixed;
             bottom: 100px;
             left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #333;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
+            transform: translateX(-50%) translateY(24px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 14px 24px;
+            border-radius: var(--radius-full);
             font-size: 14px;
+            font-weight: 500;
             opacity: 0;
-            transition: all 0.3s;
+            transition: all 0.3s var(--ease-out);
             z-index: 1000;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
         }
         
         .toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+        
+        .confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        
+        .form-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>💊 WordPill</h1>
-        <div class="header-stats" id="headerStats">Загрузка...</div>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">💊</div>
+                <span class="logo-text">WordPill</span>
+            </div>
+            <div class="header-stats" id="headerStats"></div>
+        </div>
     </div>
     
     <nav class="nav">
-        <button class="nav-btn active" data-screen="words">📚 Слова</button>
-        <button class="nav-btn" data-screen="cards">🎴 Карточки</button>
-        <button class="nav-btn" data-screen="stats">📊 Статистика</button>
+        <button class="nav-btn active" data-screen="words">Слова</button>
+        <button class="nav-btn" data-screen="cards">Карточки</button>
+        <button class="nav-btn" data-screen="stats">Статистика</button>
     </nav>
     
-    <!-- Words Screen -->
     <div class="screen active" id="screen-words">
         <div class="word-list" id="wordList"></div>
         <div class="empty-state" id="emptyState" style="display: none;">
             <div class="empty-state-icon">📚</div>
-            <div class="empty-state-text">Словарик пуст<br>Добавь первое слово!</div>
-            <button class="btn btn-primary" onclick="showScreen('add')">+ Добавить слово</button>
+            <div class="empty-state-title">Пока пусто</div>
+            <div class="empty-state-text">Добавь первое слово и начни учить</div>
+            <button class="btn btn-primary" onclick="showScreen('add')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                Добавить
+            </button>
         </div>
     </div>
     
-    <!-- Add Screen -->
     <div class="screen" id="screen-add">
         <form class="add-form" id="addForm">
             <div class="input-group">
-                <label>Слово на английском</label>
-                <div class="input-wrapper">
-                    <input type="text" id="inputWord" placeholder="например: auscultation" autocomplete="off">
-                </div>
+                <label>Слово</label>
+                <input type="text" id="inputWord" placeholder="На английском" autocomplete="off">
             </div>
             <div class="input-group">
-                <label>Перевод / определение</label>
-                <div class="input-wrapper">
-                    <input type="text" id="inputTranslation" placeholder="введи сам или выбери подсказку ↓" autocomplete="off">
-                </div>
+                <label>Перевод</label>
+                <input type="text" id="inputTranslation" placeholder="На русском" autocomplete="off">
                 <div class="translation-loading" id="translationLoading">
-                    ⏳ Ищу перевод...
+                    <div class="loading-spinner"></div>
+                    <span>Ищу перевод...</span>
                 </div>
                 <div class="translation-suggestion" id="translationSuggestion" onclick="acceptSuggestion()">
-                    <div class="suggestion-label">✨ Предложенный перевод</div>
+                    <div class="suggestion-label">✨ Вариант перевода</div>
                     <div class="suggestion-text" id="suggestionText"></div>
                     <div class="suggestion-hint">Нажми, чтобы использовать</div>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">💾 Сохранить</button>
-            <button type="button" class="btn btn-secondary" onclick="showScreen('words')">Отмена</button>
+            <div class="form-buttons">
+                <button type="submit" class="btn btn-primary btn-block">Сохранить</button>
+                <button type="button" class="btn btn-secondary btn-block" onclick="showScreen('words')">Отмена</button>
+            </div>
         </form>
     </div>
     
-    <!-- Cards Screen -->
     <div class="screen" id="screen-cards">
-        <div class="cards-container" id="cardsContainer">
-            <div class="empty-state">
-                <div class="empty-state-icon">🎴</div>
-                <div class="empty-state-text">Добавь минимум 2 слова<br>для режима карточек</div>
-            </div>
-        </div>
+        <div class="cards-container" id="cardsContainer"></div>
     </div>
     
-    <!-- Stats Screen -->
     <div class="screen" id="screen-stats">
         <div class="stats-grid" id="statsGrid"></div>
     </div>
     
-    <!-- FAB -->
-    <button class="fab" id="fab" onclick="showScreen('add')">+</button>
+    <button class="fab" id="fab" onclick="showScreen('add')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
     
-    <!-- Toast -->
     <div class="toast" id="toast"></div>
- 
+    <div class="confetti" id="confetti"></div>
+
     <script>
-        // Initialize Telegram Web App
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
         
-        // Apply Telegram theme
-        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
-        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
-        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
-        document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#2481cc');
-        document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc');
-        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
-        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f0f0f0');
-        
-        // State
         let words = [];
         let currentSession = null;
         let translateTimeout = null;
         let currentSuggestion = '';
         
-        // Storage helpers (with fallback for testing outside Telegram)
         const storage = {
             async get(key) {
                 return new Promise((resolve) => {
@@ -607,71 +839,52 @@
             }
         };
         
-        // Auto-translate function
         async function translateWord(word) {
             const loadingEl = document.getElementById('translationLoading');
             const suggestionEl = document.getElementById('translationSuggestion');
             const suggestionText = document.getElementById('suggestionText');
             
-            // Show loading
             loadingEl.classList.add('visible');
             suggestionEl.classList.remove('visible');
             
             try {
-                // Using MyMemory API (free, no key required)
                 const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ru`);
                 const data = await response.json();
                 
                 if (data.responseStatus === 200 && data.responseData.translatedText) {
                     let translation = data.responseData.translatedText;
-                    
-                    // Capitalize first letter if original was capitalized
                     if (word[0] === word[0].toLowerCase()) {
                         translation = translation.toLowerCase();
                     }
                     
-                    // Store suggestion and show it
                     currentSuggestion = translation;
                     suggestionText.textContent = translation;
                     
                     loadingEl.classList.remove('visible');
                     suggestionEl.classList.add('visible');
                     
-                    tg.HapticFeedback.impactOccurred('light');
+                    try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
                     return;
                 }
-            } catch (e) {
-                console.error('Translation error:', e);
-            }
+            } catch (e) {}
             
-            // Hide on error
             loadingEl.classList.remove('visible');
             suggestionEl.classList.remove('visible');
             currentSuggestion = '';
         }
         
-        // Accept suggestion
         function acceptSuggestion() {
             if (currentSuggestion) {
                 document.getElementById('inputTranslation').value = currentSuggestion;
                 document.getElementById('translationSuggestion').classList.remove('visible');
-                tg.HapticFeedback.impactOccurred('medium');
-                
-                // Focus on save button
-                document.querySelector('.btn-primary').focus();
+                try { tg.HapticFeedback.impactOccurred('medium'); } catch(e) {}
             }
         }
         
-        // Auto-translate on input
         document.getElementById('inputWord').addEventListener('input', (e) => {
             const word = e.target.value.trim();
+            if (translateTimeout) clearTimeout(translateTimeout);
             
-            // Clear previous timeout
-            if (translateTimeout) {
-                clearTimeout(translateTimeout);
-            }
-            
-            // Hide suggestion if word is too short
             if (word.length < 2) {
                 document.getElementById('translationLoading').classList.remove('visible');
                 document.getElementById('translationSuggestion').classList.remove('visible');
@@ -679,51 +892,53 @@
                 return;
             }
             
-            // Debounce - wait 600ms after user stops typing
-            translateTimeout = setTimeout(() => {
-                translateWord(word);
-            }, 600);
+            translateTimeout = setTimeout(() => translateWord(word), 600);
         });
         
-        // Hide suggestion when user types in translation field
-        document.getElementById('inputTranslation').addEventListener('input', () => {
-            // Keep suggestion visible but user can still type their own
-        });
-        
-        // Toast
         function showToast(message) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
+            setTimeout(() => toast.classList.remove('show'), 2500);
         }
         
-        // Navigation
+        function showConfetti() {
+            const container = document.getElementById('confetti');
+            container.innerHTML = '';
+            const colors = ['#6366f1', '#818cf8', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+            
+            for (let i = 0; i < 60; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + '%';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = Math.random() * 0.5 + 's';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                container.appendChild(piece);
+            }
+            
+            setTimeout(() => container.innerHTML = '', 3500);
+        }
+        
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => showScreen(btn.dataset.screen));
         });
         
         function showScreen(screenId) {
-            // Update nav buttons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.screen === screenId);
             });
             
-            // Update screens
             document.querySelectorAll('.screen').forEach(screen => {
                 screen.classList.toggle('active', screen.id === `screen-${screenId}`);
             });
             
-            // Show/hide FAB
-            document.getElementById('fab').style.display = 
-                (screenId === 'words' || screenId === 'add') ? 'block' : 'none';
+            document.getElementById('fab').style.display = (screenId === 'words') ? 'flex' : 'none';
             
-            // Load screen content
             if (screenId === 'words') renderWordList();
             if (screenId === 'cards') initCards();
             if (screenId === 'stats') renderStats();
             if (screenId === 'add') {
-                // Clear form and focus
                 document.getElementById('inputWord').value = '';
                 document.getElementById('inputTranslation').value = '';
                 document.getElementById('translationLoading').classList.remove('visible');
@@ -733,7 +948,6 @@
             }
         }
         
-        // Word List
         function renderWordList() {
             const list = document.getElementById('wordList');
             const empty = document.getElementById('emptyState');
@@ -750,13 +964,23 @@
             list.innerHTML = words.map((word, index) => {
                 const total = word.correct + word.wrong;
                 const rate = total > 0 ? Math.round(word.correct / total * 100) : 0;
-                const indicator = total === 0 ? '🆕' : rate >= 80 ? '✅' : rate >= 50 ? '🔶' : '🔴';
+                
+                let badgeClass = 'new', badgeText = 'Новое';
+                if (total > 0) {
+                    if (rate >= 80) { badgeClass = 'mastered'; badgeText = 'Выучено'; }
+                    else if (rate >= 50) { badgeClass = 'learning'; badgeText = 'Учу'; }
+                    else { badgeClass = 'weak'; badgeText = 'Сложное'; }
+                }
                 
                 return `
                     <div class="word-item">
-                        <div class="word-item-en">${escapeHtml(word.word)}</div>
-                        <div class="word-item-ru">${escapeHtml(word.translation)}</div>
-                        <div class="word-item-stats">${indicator} ${total > 0 ? rate + '%' : ''}</div>
+                        <div class="word-item-content">
+                            <div class="word-item-text">
+                                <div class="word-item-en">${escapeHtml(word.word)}</div>
+                                <div class="word-item-ru">${escapeHtml(word.translation)}</div>
+                            </div>
+                            <div class="word-item-badge ${badgeClass}">${badgeText}</div>
+                        </div>
                         <button class="word-item-delete" onclick="deleteWord(${index})">Удалить</button>
                     </div>
                 `;
@@ -772,18 +996,14 @@
                 return t > 0 && (w.correct / t) >= 0.8;
             }).length;
             
-            document.getElementById('headerStats').textContent = 
-                total === 0 ? 'Добавь первое слово →' : 
-                `${total} слов · ${mastered} выучено`;
+            document.getElementById('headerStats').textContent = total === 0 ? '' : `${mastered} / ${total}`;
         }
         
-        // Add Word
         document.getElementById('addForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const wordInput = document.getElementById('inputWord');
             const translationInput = document.getElementById('inputTranslation');
-            
             const word = wordInput.value.trim();
             const translation = translationInput.value.trim();
             
@@ -792,37 +1012,24 @@
                 return;
             }
             
-            words.unshift({
-                word,
-                translation,
-                correct: 0,
-                wrong: 0,
-                created: Date.now()
-            });
-            
+            words.unshift({ word, translation, correct: 0, wrong: 0, created: Date.now() });
             await storage.set('words', words);
             
-            wordInput.value = '';
-            translationInput.value = '';
-            
-            showToast('✅ Слово добавлено!');
-            tg.HapticFeedback.impactOccurred('light');
-            
+            showToast('✓ Добавлено');
+            try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
             showScreen('words');
         });
         
-        // Delete Word
         async function deleteWord(index) {
-            if (confirm('Удалить это слово?')) {
+            if (confirm('Удалить слово?')) {
                 words.splice(index, 1);
                 await storage.set('words', words);
                 renderWordList();
-                showToast('🗑 Удалено');
-                tg.HapticFeedback.impactOccurred('medium');
+                showToast('Удалено');
+                try { tg.HapticFeedback.impactOccurred('medium'); } catch(e) {}
             }
         }
         
-        // Flashcards
         function initCards() {
             const container = document.getElementById('cardsContainer');
             
@@ -830,20 +1037,17 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">🎴</div>
-                        <div class="empty-state-text">Добавь минимум 2 слова<br>для режима карточек</div>
-                        <button class="btn btn-primary" onclick="showScreen('add')">+ Добавить</button>
+                        <div class="empty-state-title">Мало слов</div>
+                        <div class="empty-state-text">Добавь минимум 2 слова</div>
+                        <button class="btn btn-primary" onclick="showScreen('add')">Добавить</button>
                     </div>
                 `;
                 return;
             }
             
-            // Start new session
             currentSession = {
                 cards: [...words].sort(() => Math.random() - 0.5),
-                index: 0,
-                correct: 0,
-                wrong: 0,
-                revealed: false
+                index: 0, correct: 0, wrong: 0, revealed: false
             };
             
             renderCard();
@@ -852,55 +1056,61 @@
         function renderCard() {
             const container = document.getElementById('cardsContainer');
             const session = currentSession;
-            
             if (!session) return;
             
-            // Session complete
             if (session.index >= session.cards.length) {
                 const total = session.correct + session.wrong;
                 const rate = Math.round(session.correct / total * 100);
                 const emoji = rate >= 80 ? '🎉' : rate >= 50 ? '👍' : '💪';
                 
+                if (rate >= 70) showConfetti();
+                
                 container.innerHTML = `
                     <div class="session-results">
                         <div class="session-results-icon">${emoji}</div>
-                        <h2>Сессия завершена!</h2>
+                        <h2>Готово!</h2>
                         <div class="session-stats">
-                            <div class="session-stat">
+                            <div>
                                 <div class="session-stat-value correct">${session.correct}</div>
-                                <div class="session-stat-label">Знал</div>
+                                <div class="session-stat-label">Верно</div>
                             </div>
-                            <div class="session-stat">
+                            <div>
                                 <div class="session-stat-value wrong">${session.wrong}</div>
-                                <div class="session-stat-label">Не знал</div>
+                                <div class="session-stat-label">Ошибок</div>
                             </div>
                         </div>
-                        <p style="color: var(--tg-theme-hint-color); margin-bottom: 24px;">
-                            Результат: ${rate}%
-                        </p>
-                        <button class="btn btn-primary" onclick="initCards()">🔄 Ещё раз</button>
-                        <button class="btn btn-secondary" style="margin-top: 12px;" onclick="showScreen('words')">К словам</button>
+                        <div class="session-percent">${rate}% правильно</div>
+                        <div class="form-buttons">
+                            <button class="btn btn-primary btn-block" onclick="initCards()">Ещё раз</button>
+                            <button class="btn btn-secondary btn-block" onclick="showScreen('words')">К словам</button>
+                        </div>
                     </div>
                 `;
                 return;
             }
             
             const card = session.cards[session.index];
+            const progress = (session.index / session.cards.length) * 100;
             
             container.innerHTML = `
-                <div class="card-progress">Карточка ${session.index + 1} из ${session.cards.length}</div>
+                <div class="card-progress">
+                    <span class="card-progress-text">${session.index + 1} / ${session.cards.length}</span>
+                    <div class="card-progress-bar">
+                        <div class="card-progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                </div>
                 <div class="flashcard" onclick="revealCard()">
                     <div class="flashcard-word">${escapeHtml(card.word)}</div>
                     ${session.revealed ? `
                         <div class="flashcard-translation">${escapeHtml(card.translation)}</div>
                     ` : `
-                        <div class="flashcard-hint">Нажми, чтобы увидеть ответ</div>
+                        <div class="flashcard-hint">Нажми для ответа</div>
                     `}
                 </div>
                 ${session.revealed ? `
                     <div class="card-buttons">
-                        <button class="card-btn card-btn-wrong" onclick="answerCard(false)">❌ Не знал</button>
-                        <button class="card-btn card-btn-correct" onclick="answerCard(true)">✅ Знал</button>
+                        <button class="card-btn card-btn-wrong" onclick="answerCard(false)">Не знал</button>
+                        <button class="card-btn card-btn-correct" onclick="answerCard(true)">Знал</button>
                     </div>
                 ` : ''}
             `;
@@ -909,7 +1119,7 @@
         function revealCard() {
             if (currentSession && !currentSession.revealed) {
                 currentSession.revealed = true;
-                tg.HapticFeedback.impactOccurred('light');
+                try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
                 renderCard();
             }
         }
@@ -919,31 +1129,22 @@
             
             const card = currentSession.cards[currentSession.index];
             
-            // Update stats
-            if (correct) {
-                currentSession.correct++;
-                card.correct++;
-            } else {
-                currentSession.wrong++;
-                card.wrong++;
-            }
+            if (correct) { currentSession.correct++; card.correct++; }
+            else { currentSession.wrong++; card.wrong++; }
             
-            // Save to storage
             const wordIndex = words.findIndex(w => w.word === card.word && w.translation === card.translation);
             if (wordIndex !== -1) {
                 words[wordIndex] = card;
                 await storage.set('words', words);
             }
             
-            // Next card
             currentSession.index++;
             currentSession.revealed = false;
             
-            tg.HapticFeedback.impactOccurred(correct ? 'light' : 'medium');
+            try { tg.HapticFeedback.impactOccurred(correct ? 'light' : 'medium'); } catch(e) {}
             renderCard();
         }
         
-        // Stats
         function renderStats() {
             const grid = document.getElementById('statsGrid');
             
@@ -958,9 +1159,9 @@
             }).length;
             
             grid.innerHTML = `
-                <div class="stat-card">
+                <div class="stat-card accent">
                     <div class="stat-value">${totalWords}</div>
-                    <div class="stat-label">Всего слов</div>
+                    <div class="stat-label">Слов</div>
                 </div>
                 <div class="stat-card success">
                     <div class="stat-value">${mastered}</div>
@@ -968,29 +1169,25 @@
                 </div>
                 <div class="stat-card success">
                     <div class="stat-value">${totalCorrect}</div>
-                    <div class="stat-label">Правильных</div>
+                    <div class="stat-label">Верно</div>
                 </div>
                 <div class="stat-card danger">
                     <div class="stat-value">${totalWrong}</div>
                     <div class="stat-label">Ошибок</div>
                 </div>
-                <div class="stat-card" style="grid-column: span 2;">
-                    <div class="stat-value" style="color: ${successRate >= 70 ? '#34c759' : successRate >= 40 ? '#ff9500' : '#ff3b30'}">
-                        ${successRate}%
-                    </div>
-                    <div class="stat-label">Общий результат</div>
+                <div class="stat-card wide accent">
+                    <div class="stat-value">${successRate}%</div>
+                    <div class="stat-label">Успешность</div>
                 </div>
             `;
         }
         
-        // Helpers
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Init
         async function init() {
             words = await storage.get('words') || [];
             renderWordList();
@@ -1000,4 +1197,3 @@
     </script>
 </body>
 </html>
- 
