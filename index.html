@@ -242,9 +242,9 @@
         .toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 
         /* MODAL */
-        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); z-index:2000; display:flex; align-items:flex-end; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); z-index:2000; display:flex; align-items:flex-end; justify-content:center; padding:20px; overflow-y:auto; opacity:0; pointer-events:none; transition:opacity 0.25s; }
         .modal-overlay.open { opacity:1; pointer-events:all; }
-        .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:28px; padding:28px 24px 24px; width:100%; max-width:380px; transform:translateY(40px); transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 -4px 40px rgba(0,0,0,.5); }
+        .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:28px; padding:24px 20px 20px; width:100%; max-width:380px; transform:translateY(40px); max-height:90vh; overflow-y:auto; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 -4px 40px rgba(0,0,0,.5); }
         .modal-overlay.open .modal-box { transform:translateY(0); }
         .modal-fire  { font-size:56px; filter:drop-shadow(0 0 20px rgba(251,191,36,0.6)); margin-bottom:10px; text-align:center; }
         .modal-title { font-size:28px; font-weight:800; background:linear-gradient(135deg,#fbbf24,#f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:10px; text-align:center; }
@@ -740,6 +740,13 @@ function showToast(msg) { const t=document.getElementById('toast'); t.textConten
 function escHtml(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function todayStr()  { return new Date().toISOString().split('T')[0]; }
 function delay(ms)   { return new Promise(r=>setTimeout(r,ms)); }
+
+// Scroll input into view when keyboard opens
+document.addEventListener("focusin", e => {
+    if (e.target.matches(".modal-box input, .modal-box select")) {
+        setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
+    }
+});
 
 init().catch(console.error);
 </script>
