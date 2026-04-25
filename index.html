@@ -59,7 +59,6 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 
 .screen { display:none; padding:16px 16px 8px; position:relative; z-index:1; }
 .screen.active { display:block; animation:slideInUp 0.3s ease; }
-
 .section-title { font-size:11px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:var(--muted); margin:20px 2px 10px; }
 
 .swipe-row { position:relative; margin-bottom:8px; border-radius:18px; overflow:hidden; animation:rowIn 0.3s ease both; }
@@ -96,9 +95,12 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .form-input { width:100%; padding:15px 17px; background:var(--surface); border:1.5px solid var(--border); border-radius:16px; font-size:16px; font-family:'Outfit',sans-serif; font-weight:500; color:var(--text); outline:none; transition:border-color 0.2s,box-shadow 0.2s; -webkit-appearance:none; }
 .form-input::placeholder { color:var(--muted); font-weight:400; }
 .form-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); background:var(--surface2); }
-.form-select { width:100%; padding:15px 17px; background:var(--surface); border:1.5px solid var(--border); border-radius:16px; font-size:16px; font-family:'Outfit',sans-serif; font-weight:500; color:var(--text); outline:none; appearance:none; cursor:pointer; }
-.form-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
-.custom-cat-input { margin-top:10px; display:none; }
+
+/* Кастомный выбор категории */
+.cat-picker-btn { width:100%; padding:15px 17px; background:var(--surface); border:1.5px solid var(--border); border-radius:16px; font-size:16px; font-family:'Outfit',sans-serif; font-weight:500; color:var(--text); text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:border-color 0.2s; }
+.cat-picker-btn:active { border-color:var(--accent); }
+.cat-picker-arrow { color:var(--muted); font-size:18px; }
+
 .translate-hint { display:none; margin-top:10px; padding:12px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:14px; font-size:14px; color:var(--muted); cursor:pointer; transition:all 0.18s; }
 .translate-hint:active { background:var(--accent-dim); border-color:var(--accent); color:var(--text); }
 .hint-val { color:var(--accent); font-weight:600; }
@@ -147,15 +149,30 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .toast { position:fixed; bottom:94px; left:50%; transform:translateX(-50%) translateY(8px); background:var(--surface3); border:1px solid var(--border); color:var(--text); padding:11px 22px; border-radius:26px; font-size:14px; font-weight:600; z-index:8000; opacity:0; transition:all 0.25s; pointer-events:none; white-space:nowrap; box-shadow:0 4px 24px rgba(0,0,0,.5); }
 .toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); z-index:2000; display:flex; align-items:flex-end; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+/* MODAL — общий */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); z-index:2000; display:flex; align-items:flex-end; justify-content:center; padding:0; opacity:0; pointer-events:none; transition:opacity 0.25s; }
 .modal-overlay.open { opacity:1; pointer-events:all; }
-.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:28px; padding:28px 24px 24px; width:100%; max-width:380px; transform:translateY(40px); transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 -4px 40px rgba(0,0,0,.5); }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:28px 28px 0 0; padding:28px 24px 40px; width:100%; max-width:480px; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1); box-shadow:0 -4px 40px rgba(0,0,0,.5); }
 .modal-overlay.open .modal-box { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
 .modal-fire { font-size:56px; text-align:center; margin-bottom:10px; filter:drop-shadow(0 0 20px rgba(251,191,36,0.6)); }
 .modal-streak-title { font-size:28px; font-weight:800; text-align:center; background:linear-gradient(135deg,#fbbf24,#f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:10px; }
 .modal-desc { font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:20px; text-align:center; }
 .modal-rules { display:flex; flex-direction:column; gap:10px; margin-bottom:22px; }
 .modal-rule { display:flex; align-items:center; gap:12px; background:var(--surface2); border-radius:14px; padding:12px 14px; font-size:13px; color:var(--text); }
+
+/* Category picker modal */
+.cat-modal-title { font-size:17px; font-weight:800; margin-bottom:16px; }
+.cat-list { display:flex; flex-direction:column; gap:6px; max-height:55vh; overflow-y:auto; margin-bottom:16px; }
+.cat-item { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:14px; cursor:pointer; transition:all 0.15s; font-size:15px; font-weight:500; }
+.cat-item:active { background:var(--accent-dim); border-color:var(--accent); }
+.cat-item.selected { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); font-weight:700; }
+.cat-item.selected::after { content:'✓'; font-weight:800; }
+.cat-item-custom { color:var(--accent); }
+.cat-add-wrap { display:flex; gap:8px; }
+.cat-add-wrap .form-input { flex:1; margin:0; padding:12px 14px; }
+.btn-add-cat { padding:12px 16px; border:none; border-radius:14px; background:var(--accent); color:#fff; font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+.btn-add-cat:active { transform:scale(0.96); }
 
 .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:rgba(15,15,19,.95); border-top:1px solid var(--border); display:flex; padding:10px 0; padding-bottom:max(10px,env(safe-area-inset-bottom)); z-index:600; backdrop-filter:blur(24px); }
 .nav-btn { flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 0; color:var(--muted); font-family:'Outfit',sans-serif; transition:color 0.2s; }
@@ -212,19 +229,10 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
         </div>
         <div class="form-group">
             <label class="form-label">Категория</label>
-            <select id="inputCategory" class="form-select" onchange="onCatChange()">
-                <option value="general">Без категории</option>
-                <option value="anatomy">Анатомия</option>
-                <option value="pharma">Фармакология</option>
-                <option value="obstetrics">Акушерство</option>
-                <option value="symptoms">Симптомы</option>
-                <option value="procedures">Процедуры</option>
-                <option value="lab">Лаборатория</option>
-                <option value="__custom__">＋ Своя категория...</option>
-            </select>
-            <div class="custom-cat-input" id="customCatWrap">
-                <input type="text" id="customCatInput" class="form-input" placeholder="Название категории" autocomplete="off">
-            </div>
+            <button class="cat-picker-btn" id="catPickerBtn" onclick="openCatModal()">
+                <span id="catPickerLabel">Без категории</span>
+                <span class="cat-picker-arrow">›</span>
+            </button>
         </div>
         <button class="btn btn-primary" id="addBtn" onclick="submitWord()">Добавить слово</button>
         <button class="btn btn-secondary" id="cancelBtn" style="display:none" onclick="cancelEdit()">Отмена</button>
@@ -240,8 +248,23 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
         <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')"><span class="nav-btn-icon">📊</span><span class="nav-btn-label">Статистика</span></button>
     </nav>
 
+    <!-- Category picker modal -->
+    <div class="modal-overlay" id="catModal" onclick="closeCatModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-handle"></div>
+            <div class="cat-modal-title">Выбери категорию</div>
+            <div class="cat-list" id="catList"></div>
+            <div class="cat-add-wrap">
+                <input type="text" id="newCatInput" class="form-input" placeholder="Своя категория..." autocomplete="off">
+                <button class="btn-add-cat" onclick="addCustomCat()">＋ Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Streak modal -->
     <div class="modal-overlay" id="streakModal" onclick="closeStreakModal()">
         <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-handle"></div>
             <div class="modal-fire">🔥</div>
             <div class="modal-streak-title" id="streakModalTitle">0 дней</div>
             <div class="modal-desc">Это твоя серия — сколько дней подряд ты открываешь WordPill.</div>
@@ -270,12 +293,33 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const DEFAULT_CATS = { general:'Общее', anatomy:'Анатомия', pharma:'Фармакология', obstetrics:'Акушерство', symptoms:'Симптомы', procedures:'Процедуры', lab:'Лаборатория' };
+const DEFAULT_CATS = [
+    { key:'general', label:'Без категории' },
+    { key:'anatomy', label:'Анатомия' },
+    { key:'pharma', label:'Фармакология' },
+    { key:'obstetrics', label:'Акушерство' },
+    { key:'symptoms', label:'Симптомы' },
+    { key:'lab', label:'Лаборатория' }
+];
 const STA = { new:'Новое', learning:'Учу', mastered:'Выучено', hard:'Сложное' };
 
 let tg = window.Telegram?.WebApp;
 let me = null, words = [], session = null, transTimer = null, editId = null;
-let customCats = []; // пользовательские категории
+let customCats = [];
+let selectedCat = 'general';
+let selectedCatLabel = 'Без категории';
+
+function allCatList() {
+    return [
+        ...DEFAULT_CATS,
+        ...customCats.map(c => ({ key: c, label: c }))
+    ];
+}
+
+function getCatLabel(key) {
+    const found = allCatList().find(c => c.key === key);
+    return found ? found.label : key;
+}
 
 async function init() {
     if (tg) { tg.ready(); tg.expand(); }
@@ -305,46 +349,12 @@ function showApp() {
 }
 function finishOnboarding() { showApp(); }
 
-function getCatLabel(key) {
-    if (DEFAULT_CATS[key]) return DEFAULT_CATS[key];
-    return customCats.find(c => c === key) || key;
-}
-
-function allCats() {
-    return { ...DEFAULT_CATS, ...Object.fromEntries(customCats.map(c => [c, c])) };
-}
-
-function rebuildCatSelect(selectId) {
-    const sel = document.getElementById(selectId);
-    const cur = sel.value;
-    // Keep default options, rebuild custom + add new option
-    while (sel.options.length > 7) sel.remove(7); // remove old custom options
-    customCats.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c; opt.textContent = c;
-        sel.insertBefore(opt, sel.options[sel.options.length - 1]); // before "＋ Своя"
-    });
-    // restore selection if possible
-    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
-}
-
-function onCatChange() {
-    const sel = document.getElementById('inputCategory');
-    const wrap = document.getElementById('customCatWrap');
-    wrap.style.display = sel.value === '__custom__' ? 'block' : 'none';
-    if (sel.value === '__custom__') {
-        document.getElementById('customCatInput').focus();
-    }
-}
-
 async function upsertUser() {
     const today = todayStr();
     const { data: ex } = await db.from('users').select('*').eq('id', me.id).single();
     if (!ex) {
         await db.from('users').insert({ id:me.id, username:me.username, first_name:me.first_name, last_name:me.last_name, chat_id:me.chat_id, streak_days:1, last_study_date:today, custom_categories:[] });
-        me.streak_days = 1;
-        customCats = [];
-        return true;
+        me.streak_days = 1; customCats = []; return true;
     }
     const yest = new Date(); yest.setDate(yest.getDate()-1);
     const yStr = yest.toISOString().split('T')[0];
@@ -354,12 +364,7 @@ async function upsertUser() {
     await db.from('users').update({ username:me.username, first_name:me.first_name, chat_id:me.chat_id, last_seen:new Date().toISOString(), streak_days:streak, last_study_date:today }).eq('id', me.id);
     me.streak_days = streak;
     customCats = ex.custom_categories || [];
-    rebuildCatSelect('inputCategory');
     return false;
-}
-
-async function saveCustomCats() {
-    await db.from('users').update({ custom_categories: customCats }).eq('id', me.id);
 }
 
 async function migrate() {
@@ -407,6 +412,49 @@ function wordStatus(w) {
     return 'learning';
 }
 
+// ── CATEGORY MODAL ────────────────────────────────────────────────────────
+function openCatModal() {
+    renderCatList();
+    document.getElementById('catModal').classList.add('open');
+    document.getElementById('newCatInput').value = '';
+}
+function closeCatModal() { document.getElementById('catModal').classList.remove('open'); }
+
+function renderCatList() {
+    const list = document.getElementById('catList');
+    list.innerHTML = allCatList().map(c => `
+        <div class="cat-item ${c.key === selectedCat ? 'selected' : ''}" onclick="selectCat('${c.key}','${c.label}')">
+            ${c.label}
+        </div>`).join('');
+}
+
+function selectCat(key, label) {
+    selectedCat = key;
+    selectedCatLabel = label;
+    document.getElementById('catPickerLabel').textContent = label;
+    closeCatModal();
+}
+
+async function addCustomCat() {
+    const val = document.getElementById('newCatInput').value.trim();
+    if (!val) return;
+    if (customCats.includes(val) || DEFAULT_CATS.find(c=>c.label===val)) {
+        showToast('Такая категория уже есть'); return;
+    }
+    customCats.push(val);
+    await db.from('users').update({ custom_categories: customCats }).eq('id', me.id);
+    document.getElementById('newCatInput').value = '';
+    selectCat(val, val);
+    showToast('✅ Категория добавлена!');
+}
+
+function resetCatPicker() {
+    selectedCat = 'general';
+    selectedCatLabel = 'Без категории';
+    document.getElementById('catPickerLabel').textContent = 'Без категории';
+}
+
+// ── WORDS ─────────────────────────────────────────────────────────────────
 function renderWords() {
     const el = document.getElementById('wordsList');
     if (!words.length) {
@@ -473,12 +521,12 @@ function openEdit(id) {
     closeSwipes();
     const w=words.find(w=>w.id===id); if(!w) return;
     editId=id;
-    rebuildCatSelect('inputCategory');
+    selectedCat = w.category || 'general';
+    selectedCatLabel = getCatLabel(selectedCat);
     document.getElementById('inputWord').value=w.word;
     document.getElementById('inputTranslation').value=w.translation;
-    document.getElementById('inputCategory').value=w.category||'general';
+    document.getElementById('catPickerLabel').textContent = selectedCatLabel;
     document.getElementById('translateHint').style.display='none';
-    document.getElementById('customCatWrap').style.display='none';
     document.getElementById('addTitle').textContent='✏️ Редактировать слово';
     document.getElementById('addBtn').textContent='Сохранить изменения';
     document.getElementById('cancelBtn').style.display='block';
@@ -490,36 +538,20 @@ function cancelEdit() {
     document.getElementById('inputWord').value='';
     document.getElementById('inputTranslation').value='';
     document.getElementById('translateHint').style.display='none';
-    document.getElementById('customCatWrap').style.display='none';
-    document.getElementById('inputCategory').value='general';
     document.getElementById('addTitle').textContent='➕ Новое слово';
     document.getElementById('addBtn').textContent='Добавить слово';
     document.getElementById('cancelBtn').style.display='none';
+    resetCatPicker();
     showScreen('words');
 }
 
 async function submitWord() {
     const word=document.getElementById('inputWord').value.trim();
     const translation=document.getElementById('inputTranslation').value.trim();
-    let category=document.getElementById('inputCategory').value;
-
-    // Обработка своей категории
-    if (category === '__custom__') {
-        const newCat = document.getElementById('customCatInput').value.trim();
-        if (!newCat) { showToast('Введи название категории'); return; }
-        category = newCat;
-        if (!customCats.includes(category)) {
-            customCats.push(category);
-            await saveCustomCats();
-            rebuildCatSelect('inputCategory');
-        }
-    }
-
+    const category=selectedCat;
     if (!word||!translation) { showToast('Заполни оба поля'); return; }
-
     const btn=document.getElementById('addBtn');
     btn.disabled=true; btn.textContent=editId?'Сохраняю...':'Добавляю...';
-
     if (editId) {
         await db.from('words').update({word,translation,category}).eq('id',editId);
         const idx=words.findIndex(w=>w.id===editId);
@@ -534,9 +566,7 @@ async function submitWord() {
         document.getElementById('inputWord').value='';
         document.getElementById('inputTranslation').value='';
         document.getElementById('translateHint').style.display='none';
-        document.getElementById('customCatWrap').style.display='none';
-        document.getElementById('customCatInput').value='';
-        document.getElementById('inputCategory').value='general';
+        resetCatPicker();
         updateHeader(); renderWords();
         showToast('✅ Слово добавлено!'); showScreen('words');
     }
@@ -679,7 +709,6 @@ function showScreen(name) {
     s.style.display='block'; void s.offsetWidth; s.classList.add('active');
     const nb=document.getElementById(`nav-${name}`); if(nb) nb.classList.add('active');
     document.getElementById('fabBtn').style.display=name==='words'?'flex':'none';
-    if(name==='add') rebuildCatSelect('inputCategory');
     if(name==='cards') initCards();
     if(name==='stats') renderStats();
 }
