@@ -1557,7 +1557,7 @@
         }
 
         // Двусторонние карточки: для каждого слова случайно EN→RU или RU→EN
-        const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, Math.min(20, pool.length));
+        const shuffled = pool.sort((a, b) => new Date(a.next_review) - new Date(b.next_review)).slice(0, Math.min(20, pool.length));
         const cards = shuffled.map(w => ({ ...w, reverse: Math.random() > 0.5 }));
         session = { cards, index: 0, correct: 0, wrong: 0, revealed: false };
         renderCard();
