@@ -950,16 +950,65 @@
         const isNew = await upsertUser();
         await loadWords();
 
+        // Миграция из Telegram CloudStorage → Supabase
+        if (words.length === 0) {
+            await migrateFromCloudStorage();
+            if (words.length > 0) {
+                showToast('✅ Слова восстановлены!');
+            }
+        }
+
         await delay(1900);
         document.getElementById('splash').style.display = 'none';
 
-        if (isNew) {
+        if (isNew && words.length === 0) {
             document.getElementById('onboarding').classList.add('visible');
         } else {
             showApp();
         }
 
         document.getElementById('inputWord').addEventListener('input', onWordInput);
+    }
+
+    // ════════════════════════════════════════════
+    // MIGRATION: Telegram CloudStorage → Supabase
+    // ════════════════════════════════════════════
+    async function migrateFromCloudStorage() {
+        if (!tg?.CloudStorage) return;
+
+        try {
+            const oldWords = await new Promise((resolve) => {
+                tg.CloudStorage.getItem('words', (err, val) => {
+                    if (err || !val) { resolve(null); return; }
+                    try { resolve(JSON.parse(val)); }
+                    catch { resolve(null); }
+                });
+            });
+
+            if (!oldWords || !Array.isArray(oldWords) || oldWords.length === 0) return;
+
+            // Вставляем старые слова в Supabase
+            const toInsert = oldWords.map(w => ({
+                user_id:     currentUser.id,
+                word:        w.word        || w.en || '',
+                translation: w.translation || w.ru || '',
+                category:    w.category    || 'general',
+                next_review: new Date().toISOString(),
+                times_correct: w.correct   || 0,
+                times_wrong:   w.wrong     || 0
+            })).filter(w => w.word && w.translation);
+
+            if (toInsert.length === 0) return;
+
+            const { data } = await db.from('words').insert(toInsert).select();
+            if (data) {
+                words = [...data, ...words];
+                // Очищаем старое хранилище
+                tg.CloudStorage.removeItem('words', () => {});
+            }
+        } catch (e) {
+            console.warn('Migration error:', e);
+        }
     }
 
     function showApp() {
