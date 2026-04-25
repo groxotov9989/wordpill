@@ -974,40 +974,92 @@
     // MIGRATION: Telegram CloudStorage → Supabase
     // ════════════════════════════════════════════
     async function migrateFromCloudStorage() {
-        if (!tg?.CloudStorage) return;
+        if (!tg?.CloudStorage) {
+            console.log('Migration: CloudStorage недоступен');
+            return;
+        }
 
         try {
-            const oldWords = await new Promise((resolve) => {
-                tg.CloudStorage.getItem('words', (err, val) => {
-                    if (err || !val) { resolve(null); return; }
-                    try { resolve(JSON.parse(val)); }
-                    catch { resolve(null); }
+            // Сначала смотрим все ключи в CloudStorage
+            const allKeys = await new Promise((resolve) => {
+                tg.CloudStorage.getKeys((err, keys) => {
+                    console.log('CloudStorage keys:', err, keys);
+                    resolve(err ? [] : (keys || []));
                 });
             });
 
-            if (!oldWords || !Array.isArray(oldWords) || oldWords.length === 0) return;
+            console.log('Все ключи в CloudStorage:', allKeys);
 
-            // Вставляем старые слова в Supabase
-            const toInsert = oldWords.map(w => ({
-                user_id:     currentUser.id,
-                word:        w.word        || w.en || '',
-                translation: w.translation || w.ru || '',
-                category:    w.category    || 'general',
-                next_review: new Date().toISOString(),
-                times_correct: w.correct   || 0,
-                times_wrong:   w.wrong     || 0
+            if (allKeys.length === 0) {
+                console.log('Migration: CloudStorage пуст');
+                return;
+            }
+
+            // Пробуем все возможные ключи где могут быть слова
+            const possibleKeys = allKeys.length > 0 ? allKeys : ['words', 'wordpill_words', 'vocab'];
+
+            let foundWords = null;
+            let foundKey = null;
+
+            for (const key of possibleKeys) {
+                const val = await new Promise((resolve) => {
+                    tg.CloudStorage.getItem(key, (err, v) => {
+                        console.log(`CloudStorage[${key}]:`, err, v ? v.substring(0, 100) : null);
+                        resolve(err ? null : v);
+                    });
+                });
+
+                if (!val) continue;
+
+                try {
+                    const parsed = JSON.parse(val);
+                    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].word) {
+                        foundWords = parsed;
+                        foundKey = key;
+                        console.log(`Нашли слова в ключе "${key}":`, parsed.length, 'слов');
+                        break;
+                    }
+                } catch (e) {
+                    console.log(`Ключ "${key}" не JSON или неверный формат`);
+                }
+            }
+
+            if (!foundWords || foundWords.length === 0) {
+                console.log('Migration: слова не найдены ни в одном ключе');
+                return;
+            }
+
+            // Вставляем в Supabase
+            const toInsert = foundWords.map(w => ({
+                user_id:       currentUser.id,
+                word:          w.word        || w.en    || '',
+                translation:   w.translation || w.ru    || '',
+                category:      w.category    || 'general',
+                next_review:   new Date().toISOString(),
+                times_correct: w.correct     || w.times_correct || 0,
+                times_wrong:   w.wrong       || w.times_wrong   || 0
             })).filter(w => w.word && w.translation);
 
             if (toInsert.length === 0) return;
 
-            const { data } = await db.from('words').insert(toInsert).select();
-            if (data) {
+            console.log('Мигрируем', toInsert.length, 'слов в Supabase...');
+            const { data, error } = await db.from('words').insert(toInsert).select();
+
+            if (error) {
+                console.error('Ошибка вставки:', error);
+                return;
+            }
+
+            if (data && data.length > 0) {
                 words = [...data, ...words];
-                // Очищаем старое хранилище
-                tg.CloudStorage.removeItem('words', () => {});
+                console.log('Миграция успешна:', data.length, 'слов перенесено');
+                // Очищаем CloudStorage
+                tg.CloudStorage.removeItem(foundKey, () => {
+                    console.log('CloudStorage очищен');
+                });
             }
         } catch (e) {
-            console.warn('Migration error:', e);
+            console.error('Migration error:', e);
         }
     }
 
