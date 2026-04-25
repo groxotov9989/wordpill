@@ -775,6 +775,113 @@
             transition: opacity 0.2s;
         }
         .nav-btn.active::after { opacity: 1; }
+
+        /* ===== FAB — Floating Add Button ===== */
+        .fab {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px auto 8px;
+            padding: 16px 28px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            box-shadow: 0 6px 28px var(--accent-glow);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            width: calc(100% - 0px);
+            justify-content: center;
+        }
+        .fab:active {
+            transform: scale(0.97);
+            box-shadow: 0 3px 14px var(--accent-glow);
+        }
+        .fab-icon {
+            font-size: 22px;
+            line-height: 1;
+            font-style: normal;
+        }
+        .fab-label {
+            font-size: 16px;
+        }
+
+        /* ===== STREAK MODAL ===== */
+        .streak-badge { cursor: pointer; }
+        .streak-badge:active { transform: scale(0.93); }
+
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 28px 24px 24px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            transform: translateY(40px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5);
+        }
+        .modal-overlay.open .modal-box {
+            transform: translateY(0);
+        }
+        .modal-fire {
+            font-size: 56px;
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
+            margin-bottom: 10px;
+        }
+        .modal-title {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .modal-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .modal-rules {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 22px;
+            text-align: left;
+        }
+        .modal-rule {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface-2);
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .modal-rule-icon { font-size: 18px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -823,7 +930,7 @@
     <header class="header">
         <div class="header-top">
             <div class="header-logo">WordPill 💊</div>
-            <div class="streak-badge" id="streakBadge">🔥 0</div>
+            <div class="streak-badge" id="streakBadge" onclick="openStreakModal()">🔥 0</div>
         </div>
         <div class="header-sub" id="headerSub">Загрузка...</div>
     </header>
@@ -831,6 +938,11 @@
     <!-- Screens -->
     <div id="screen-words" class="screen active">
         <div id="wordsList"></div>
+        <!-- Floating Add Button -->
+        <button class="fab" onclick="showScreen('add')" id="fabAdd">
+            <span class="fab-icon">＋</span>
+            <span class="fab-label">Добавить слово</span>
+        </button>
     </div>
 
     <div id="screen-add" class="screen">
@@ -875,10 +987,6 @@
             <span class="nav-btn-icon">📚</span>
             <span class="nav-btn-label">Слова</span>
         </button>
-        <button class="nav-btn" id="nav-add" onclick="showScreen('add')">
-            <span class="nav-btn-icon">➕</span>
-            <span class="nav-btn-label">Добавить</span>
-        </button>
         <button class="nav-btn" id="nav-cards" onclick="showScreen('cards')">
             <span class="nav-btn-icon">🎴</span>
             <span class="nav-btn-label">Карточки</span>
@@ -888,6 +996,30 @@
             <span class="nav-btn-label">Статистика</span>
         </button>
     </nav>
+
+    <!-- Streak Modal -->
+    <div class="modal-overlay" id="streakModal" onclick="closeStreakModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-fire">🔥</div>
+            <div class="modal-title" id="modalStreakNum">0 дней</div>
+            <div class="modal-desc">Это твоя серия — сколько дней подряд ты открываешь WordPill.</div>
+            <div class="modal-rules">
+                <div class="modal-rule">
+                    <span class="modal-rule-icon">✅</span>
+                    <span>Открой бот сегодня — серия продолжается</span>
+                </div>
+                <div class="modal-rule">
+                    <span class="modal-rule-icon">❌</span>
+                    <span>Пропусти день — серия сгорает</span>
+                </div>
+                <div class="modal-rule">
+                    <span class="modal-rule-icon">🎯</span>
+                    <span>Цель: 7, 14, 30 дней подряд</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="closeStreakModal()" style="margin-top:4px">Понятно!</button>
+        </div>
+    </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1513,6 +1645,17 @@
     // ════════════════════════════════════════════
     // UI HELPERS
     // ════════════════════════════════════════════
+    function openStreakModal() {
+        const days = currentUser.streak_days || 0;
+        const label = days === 1 ? '1 день' : days < 5 ? `${days} дня` : `${days} дней`;
+        document.getElementById('modalStreakNum').textContent = `🔥 ${label} подряд`;
+        document.getElementById('streakModal').classList.add('open');
+    }
+
+    function closeStreakModal() {
+        document.getElementById('streakModal').classList.remove('open');
+    }
+
     function updateHeaderUI() {
         const due   = getDueWords().length;
         const total = words.length;
@@ -1539,10 +1682,11 @@
 
         const screen = document.getElementById(`screen-${name}`);
         screen.style.display = 'block';
-        // force reflow for animation
         void screen.offsetWidth;
         screen.classList.add('active');
-        document.getElementById(`nav-${name}`)?.classList.add('active');
+
+        const navBtn = document.getElementById(`nav-${name}`);
+        if (navBtn) navBtn.classList.add('active');
 
         if (name === 'cards') initCards();
         if (name === 'stats') renderStats();
