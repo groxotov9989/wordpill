@@ -159,18 +159,17 @@
             background: linear-gradient(135deg, var(--accent), var(--accent-2));
             color: #fff;
             border: none;
-            font-size: 32px;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
-            line-height: 1;
             cursor: pointer;
             box-shadow: 0 6px 24px var(--accent-glow);
             z-index: 700;
             transition: transform 0.18s, box-shadow 0.18s;
-            display: none;
+            padding: 0;
         }
-        .fab-circle:active { transform: scale(0.92); box-shadow: 0 3px 12px var(--accent-glow); }
+        .fab-circle:active { transform: scale(0.92); }
+
 
         /* FORM */
         .form-group { margin-bottom:18px; }
@@ -779,6 +778,6 @@ document.addEventListener("focusin", e => {
 
 init().catch(console.error);
 </script>
-<button class="fab-circle" id="fabCircle" onclick="showScreen('add')">＋</button>
+<button class="fab-circle" id="fabCircle" onclick="showScreen('add')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
 </body>
 </html>
