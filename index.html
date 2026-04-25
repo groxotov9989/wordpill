@@ -295,11 +295,10 @@
             margin-bottom: 0;
             transition: transform 0.25s ease, box-shadow 0.18s ease, border-color 0.18s ease;
             z-index: 1;
-            animation: wordItemIn 0.3s ease both;
             overflow: hidden;
         }
         .word-item::before {
-            content: '';
+            content: "";
             position: absolute;
             inset: 0;
             border-radius: inherit;
@@ -316,7 +315,7 @@
             margin-bottom: 8px;
             border-radius: 18px;
             overflow: hidden;
-        }
+            animation: wordItemIn 0.3s ease both;
         }
         .word-item-actions-swipe {
             position: absolute;
