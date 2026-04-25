@@ -299,6 +299,7 @@
     </div>
 
     <div id="screen-add" class="screen">
+        <div id="addScreenTitle" style="font-size:18px;font-weight:800;margin-bottom:20px">➕ Новое слово</div>
         <div class="form-group">
             <label class="form-label">Слово (EN)</label>
             <input type="text" id="inputWord" class="form-input" placeholder="Например: auscultation" autocomplete="off" spellcheck="false">
@@ -323,6 +324,7 @@
             </select>
         </div>
         <button class="btn btn-primary" id="addBtn" onclick="addWord()">Добавить слово</button>
+        <button class="btn btn-secondary" id="cancelEditBtn" style="display:none" onclick="cancelEdit()">Отмена</button>
     </div>
 
     <div id="screen-cards" class="screen"><div id="cardsArea"></div></div>
@@ -469,7 +471,7 @@ async function addWord() {
     document.getElementById('inputTranslation').value='';
     document.getElementById('translateSuggestion').style.display='none';
     updateHeaderUI(); renderWordsList();
-    showToast('✅ Слово добавлено!'); showScreen('words');
+    editingId=null; document.getElementById('addScreenTitle').textContent='➕ Новое слово'; document.getElementById('addBtn').textContent='Добавить слово'; document.getElementById('addBtn').onclick=addWord; document.getElementById('cancelEditBtn').style.display='none'; showToast('✅ Слово добавлено!'); showScreen('words');
 }
 
 async function deleteWord(id) {
@@ -482,21 +484,36 @@ async function deleteWord(id) {
 function openEditModal(id) {
     const w = words.find(w=>w.id===id); if (!w) return;
     editingId = id;
-    document.getElementById('editWord').value = w.word;
-    document.getElementById('editTranslation').value = w.translation;
-    document.getElementById('editCategory').value = w.category||'general';
-    document.getElementById('editModal').classList.add('open');
+    document.getElementById("inputWord").value = w.word;
+    document.getElementById("inputTranslation").value = w.translation;
+    document.getElementById("inputCategory").value = w.category||"general";
+    document.getElementById("translateSuggestion").style.display = "none";
+    document.getElementById("addScreenTitle").textContent = "✏️ Редактировать слово";
+    document.getElementById("addBtn").textContent = "Сохранить изменения";
+    document.getElementById("addBtn").onclick = saveEdit;
+    document.getElementById("cancelEditBtn").style.display = "block";
+    showScreen("add");
 }
-function closeEditModal() { document.getElementById('editModal').classList.remove('open'); editingId=null; }
+function cancelEdit() {
+    editingId = null;
+    document.getElementById("inputWord").value = "";
+    document.getElementById("inputTranslation").value = "";
+    document.getElementById("translateSuggestion").style.display = "none";
+    document.getElementById("addScreenTitle").textContent = "➕ Новое слово";
+    document.getElementById("addBtn").textContent = "Добавить слово";
+    document.getElementById("addBtn").onclick = addWord;
+    document.getElementById("cancelEditBtn").style.display = "none";
+    showScreen("words");
+}
 async function saveEdit() {
-    const word=document.getElementById('editWord').value.trim();
-    const translation=document.getElementById('editTranslation').value.trim();
-    const category=document.getElementById('editCategory').value;
-    if (!word||!translation) { showToast('Заполни оба поля'); return; }
-    await db.from('words').update({word,translation,category}).eq('id',editingId);
+    const word=document.getElementById("inputWord").value.trim();
+    const translation=document.getElementById("inputTranslation").value.trim();
+    const category=document.getElementById("inputCategory").value;
+    if (!word||!translation) { showToast("Заполни оба поля"); return; }
+    await db.from("words").update({word,translation,category}).eq("id",editingId);
     const idx=words.findIndex(w=>w.id===editingId);
     if (idx>=0) words[idx]={...words[idx],word,translation,category};
-    closeEditModal(); renderWordsList(); showToast('✅ Сохранено!');
+    cancelEdit(); renderWordsList(); showToast("✅ Сохранено!");
 }
 
 // ── RENDER WORDS + SWIPE ──────────────────────────────────────────────────
