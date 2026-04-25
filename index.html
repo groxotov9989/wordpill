@@ -306,75 +306,42 @@
             opacity: 0;
             transition: opacity 0.2s;
         }
-        .word-item:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-        }
         .word-item:hover { border-color: rgba(168, 85, 247, 0.2); }
         .word-item:hover::before { opacity: 1; }
-        .word-item:hover .delete-btn { opacity: 1; transform: scale(1); }
 
-        .word-item-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
-        .word-item-en {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text);
-            white-space: nowrap;
+        /* Swipe container */
+        .word-item-wrap {
+            position: relative;
+            margin-bottom: 8px;
+            border-radius: 18px;
             overflow: hidden;
-            text-overflow: ellipsis;
         }
-        .word-item-ru {
-            font-size: 13px;
-            color: var(--muted);
-            margin-top: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .word-item-footer {
+        .word-item-actions-swipe {
+            position: absolute;
+            right: 0; top: 0; bottom: 0;
             display: flex;
+            align-items: stretch;
+            border-radius: 0 18px 18px 0;
+            overflow: hidden;
+        }
+        .swipe-btn {
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 7px;
-            margin-top: 6px;
-            flex-wrap: wrap;
-        }
-        .status-badge {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 2px 9px;
-            border-radius: 10px;
-        }
-        .badge-new      { background: var(--accent-dim); color: var(--accent); }
-        .badge-learning { background: var(--warning-dim); color: var(--warning); }
-        .badge-mastered { background: var(--success-dim); color: var(--success); }
-        .badge-hard     { background: var(--danger-dim); color: var(--danger); }
-        .word-meta {
-            font-size: 11px;
-            color: var(--muted);
-        }
-        .due-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: var(--danger);
-            box-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
-            flex-shrink: 0;
-        }
-        .delete-btn {
-            background: none;
+            justify-content: center;
+            gap: 4px;
+            width: 72px;
             border: none;
             cursor: pointer;
-            font-size: 19px;
-            padding: 4px 2px;
-            color: var(--muted);
-            opacity: 0;
-            transform: scale(0.8);
-            transition: opacity 0.2s, transform 0.2s, color 0.15s;
-            position: relative; z-index: 1;
-            flex-shrink: 0;
+            transition: filter 0.15s;
         }
-        .delete-btn:active { color: var(--danger); transform: scale(0.9); }
+        .swipe-btn:active { filter: brightness(0.85); }
+        .swipe-btn-icon { font-size: 20px; }
+        .swipe-btn-label { font-size: 11px; font-weight: 700; font-family: "Outfit", sans-serif; color: #fff; }
+        .swipe-btn-edit { background: #3b82f6; }
+        .swipe-btn-delete { background: var(--danger); }
+        .word-item { margin-bottom: 0; transition: transform 0.25s ease; }
+        .word-item-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
 
         /* ===== EMPTY STATE ===== */
         .empty-state {
@@ -997,6 +964,35 @@
         </button>
     </nav>
 
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal" onclick="closeEditModal()">
+        <div class="modal-box" onclick="event.stopPropagation()" style="text-align:left">
+            <div style="font-size:18px;font-weight:800;margin-bottom:20px">✏️ Редактировать слово</div>
+            <div class="form-group">
+                <label class="form-label">Слово (EN)</label>
+                <input type="text" id="editWord" class="form-input" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Перевод (RU)</label>
+                <input type="text" id="editTranslation" class="form-input" autocomplete="off">
+            </div>
+            <div class="form-group" style="margin-bottom:20px">
+                <label class="form-label">Категория</label>
+                <select id="editCategory" class="form-select">
+                    <option value="general">Без категории</option>
+                    <option value="anatomy">Анатомия</option>
+                    <option value="pharma">Фармакология</option>
+                    <option value="obstetrics">Акушерство</option>
+                    <option value="symptoms">Симптомы</option>
+                    <option value="procedures">Процедуры</option>
+                    <option value="lab">Лаборатория</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="saveEdit()">Сохранить</button>
+            <button class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+        </div>
+    </div>
+
     <!-- Streak Modal -->
     <div class="modal-overlay" id="streakModal" onclick="closeStreakModal()">
         <div class="modal-box" onclick="event.stopPropagation()">
@@ -1306,9 +1302,13 @@
         showToast('Слово удалено');
     }
 
+    function wordStatus(w) {
+
     // ════════════════════════════════════════════
-    // WORDS — RENDER
+    // WORDS — RENDER + SWIPE
     // ════════════════════════════════════════════
+    let activeSwipe = null;
+
     function renderWordsList() {
         const container = document.getElementById('wordsList');
         if (!words.length) {
@@ -1330,37 +1330,143 @@
 
         let html = '';
         Object.entries(byCategory).forEach(([cat, catWords]) => {
-            html += `<div class="category-group">
-                <div class="section-title">${CATEGORY_LABELS[cat] || cat}</div>`;
-
+            html += `<div class="category-group"><div class="section-title">${CATEGORY_LABELS[cat] || cat}</div>`;
             catWords.forEach((w, i) => {
-                const isDue   = new Date(w.next_review) <= now;
-                const status  = wordStatus(w);
-                const total   = (w.times_correct || 0) + (w.times_wrong || 0);
-                const delay   = Math.min(i * 40, 300);
-
+                const isDue  = new Date(w.next_review) <= now;
+                const status = wordStatus(w);
+                const total  = (w.times_correct || 0) + (w.times_wrong || 0);
+                const delay  = Math.min(i * 40, 300);
                 html += `
-                <div class="word-item" style="animation-delay:${delay}ms">
-                    <div class="word-item-body">
-                        <div class="word-item-en">${escHtml(w.word)}</div>
-                        <div class="word-item-ru">${escHtml(w.translation)}</div>
-                        <div class="word-item-footer">
-                            <span class="status-badge badge-${status}">${STATUS_LABELS[status]}</span>
-                            ${isDue && total > 0 ? '<span class="due-dot"></span>' : ''}
-                            ${total > 0 ? `<span class="word-meta">✓${w.times_correct || 0} · ✗${w.times_wrong || 0} · ${w.interval_days || 1}д</span>` : ''}
+                <div class="word-item-wrap" data-id="${w.id}" style="animation-delay:${delay}ms">
+                    <div class="word-item-actions-swipe">
+                        <button class="swipe-btn swipe-btn-edit" onclick="openEditModal(${w.id})">
+                            <span class="swipe-btn-icon">✏️</span>
+                            <span class="swipe-btn-label">Изменить</span>
+                        </button>
+                        <button class="swipe-btn swipe-btn-delete" onclick="deleteWord(${w.id})">
+                            <span class="swipe-btn-icon">🗑️</span>
+                            <span class="swipe-btn-label">Удалить</span>
+                        </button>
+                    </div>
+                    <div class="word-item" id="wi-${w.id}" style="animation-delay:${delay}ms">
+                        <div class="word-item-body">
+                            <div class="word-item-en">${escHtml(w.word)}</div>
+                            <div class="word-item-ru">${escHtml(w.translation)}</div>
+                            <div class="word-item-footer">
+                                <span class="status-badge badge-${status}">${STATUS_LABELS[status]}</span>
+                                ${isDue && total > 0 ? '<span class="due-dot"></span>' : ''}
+                                ${total > 0 ? `<span class="word-meta">✓${w.times_correct || 0} · ✗${w.times_wrong || 0} · ${w.interval_days || 1}д</span>` : ''}
+                            </div>
                         </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteWord(${w.id})">🗑</button>
                 </div>`;
             });
-
             html += '</div>';
         });
 
         container.innerHTML = html;
+        initSwipe();
     }
 
-    function wordStatus(w) {
+    function initSwipe() {
+        document.querySelectorAll('.word-item-wrap').forEach(wrap => {
+            const item = wrap.querySelector('.word-item');
+            const btns = wrap.querySelector('.word-item-actions-swipe');
+            const btnsW = 144; // 2 buttons * 72px
+            let startX = 0, startY = 0, isDragging = false, isOpen = false;
+
+            item.addEventListener('touchstart', e => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                isDragging = false;
+            }, { passive: true });
+
+            item.addEventListener('touchmove', e => {
+                const dx = e.touches[0].clientX - startX;
+                const dy = e.touches[0].clientY - startY;
+                if (!isDragging && Math.abs(dx) < Math.abs(dy)) return;
+                isDragging = true;
+
+                // Close other open swipes
+                if (activeSwipe && activeSwipe !== item) {
+                    activeSwipe.style.transform = 'translateX(0)';
+                    activeSwipe = null;
+                }
+
+                const x = isOpen ? Math.min(0, dx - btnsW) : Math.min(0, dx);
+                if (x < 0) item.style.transform = `translateX(${Math.max(-btnsW, x)}px)`;
+            }, { passive: true });
+
+            item.addEventListener('touchend', e => {
+                if (!isDragging) return;
+                const dx = e.changedTouches[0].clientX - startX;
+                const threshold = 60;
+
+                if (!isOpen && dx < -threshold) {
+                    item.style.transform = `translateX(-${btnsW}px)`;
+                    isOpen = true;
+                    activeSwipe = item;
+                } else if (isOpen && dx > threshold) {
+                    item.style.transform = 'translateX(0)';
+                    isOpen = false;
+                    activeSwipe = null;
+                } else {
+                    item.style.transform = isOpen ? `translateX(-${btnsW}px)` : 'translateX(0)';
+                }
+            });
+        });
+
+        // Close swipe on scroll
+        document.getElementById('screen-words').addEventListener('scroll', closeAllSwipes, { passive: true });
+    }
+
+    function closeAllSwipes() {
+        document.querySelectorAll('.word-item').forEach(i => i.style.transform = 'translateX(0)');
+        activeSwipe = null;
+    }
+
+    // ════════════════════════════════════════════
+    // EDIT WORD
+    // ════════════════════════════════════════════
+    let editingId = null;
+
+    function openEditModal(id) {
+        closeAllSwipes();
+        const w = words.find(w => w.id === id);
+        if (!w) return;
+        editingId = id;
+        document.getElementById('editWord').value = w.word;
+        document.getElementById('editTranslation').value = w.translation;
+        document.getElementById('editCategory').value = w.category || 'general';
+        document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('open');
+        editingId = null;
+    }
+
+    async function saveEdit() {
+        const word        = document.getElementById('editWord').value.trim();
+        const translation = document.getElementById('editTranslation').value.trim();
+        const category    = document.getElementById('editCategory').value;
+        if (!word || !translation) { showToast('Заполни оба поля'); return; }
+
+        const { data, error } = await db.from('words')
+            .update({ word, translation, category })
+            .eq('id', editingId)
+            .select().single();
+
+        if (error) { showToast('Ошибка сохранения'); return; }
+
+        const idx = words.findIndex(w => w.id === editingId);
+        if (idx >= 0) words[idx] = { ...words[idx], word, translation, category };
+
+        closeEditModal();
+        renderWordsList();
+        showToast('✅ Сохранено!');
+    }
+
         const total = (w.times_correct || 0) + (w.times_wrong || 0);
         if (total === 0) return 'new';
         const rate = w.times_correct / total;
@@ -1450,8 +1556,10 @@
             return;
         }
 
+        // Двусторонние карточки: для каждого слова случайно EN→RU или RU→EN
         const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, Math.min(20, pool.length));
-        session = { cards: shuffled, index: 0, correct: 0, wrong: 0, revealed: false };
+        const cards = shuffled.map(w => ({ ...w, reverse: Math.random() > 0.5 }));
+        session = { cards, index: 0, correct: 0, wrong: 0, revealed: false };
         renderCard();
     }
 
@@ -1502,10 +1610,10 @@
                 </div>
             </div>
             <div class="flashcard" onclick="revealCard()">
-                <div class="flashcard-cat">${CATEGORY_LABELS[card.category] || card.category}</div>
-                <div class="flashcard-word">${escHtml(card.word)}</div>
+                <div class="flashcard-cat">${CATEGORY_LABELS[card.category] || card.category}${card.reverse ? " · RU→EN" : " · EN→RU"}</div>
+                <div class="flashcard-word">${card.reverse ? escHtml(card.translation) : escHtml(card.word)}</div>
                 ${session.revealed
-                    ? `<div class="flashcard-translation">${escHtml(card.translation)}</div>`
+                    ? `<div class="flashcard-translation">${card.reverse ? escHtml(card.word) : escHtml(card.translation)}</div>`
                     : `<div class="flashcard-tap-hint"><span class="tap-hint-icon">👆</span>Нажми, чтобы увидеть перевод</div>`
                 }
             </div>
@@ -1513,7 +1621,7 @@
             <div class="card-actions">
                 <button class="btn btn-wrong"   onclick="answerCard(0)">✗ Не знал</button>
                 <button class="btn btn-correct" onclick="answerCard(1)">✓ Знал</button>
-            </div>` : ''}`;
+            </div>` : ""}`;
     }
 
     function revealCard() {
