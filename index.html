@@ -148,16 +148,26 @@
         .empty-state-icon { font-size:56px; margin-bottom:14px; opacity:.6; }
         .empty-state-text { font-size:16px; color:var(--muted); line-height:1.65; margin-bottom:24px; }
 
-        /* FAB */
-        .fab {
-            display:flex; align-items:center; justify-content:center; gap:10px;
-            margin:20px 0 8px; padding:16px 28px; width:100%;
-            background:linear-gradient(135deg,var(--accent),var(--accent-2));
-            color:#fff; border:none; border-radius:20px;
-            font-size:16px; font-weight:700; font-family:'Outfit',sans-serif;
-            cursor:pointer; box-shadow:0 6px 28px var(--accent-glow); transition:all 0.18s;
+        /* FAB — фиксированный круглый */
+        .fab-circle {
+            position: fixed;
+            bottom: max(80px, calc(60px + env(safe-area-inset-bottom)));
+            right: 20px;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 6px 24px var(--accent-glow);
+            z-index: 400;
+            transition: transform 0.18s, box-shadow 0.18s;
+            display: none;
         }
-        .fab:active { transform:scale(0.97); box-shadow:0 3px 14px var(--accent-glow); }
+        .fab-circle:active { transform: scale(0.92); box-shadow: 0 3px 12px var(--accent-glow); }
 
         /* FORM */
         .form-group { margin-bottom:18px; }
@@ -292,10 +302,6 @@
 
     <div id="screen-words" class="screen active">
         <div id="wordsList"></div>
-        <button class="fab" onclick="showScreen('add')">
-            <span style="font-size:22px;line-height:1">＋</span>
-            <span>Добавить слово</span>
-        </button>
     </div>
 
     <div id="screen-add" class="screen">
@@ -336,6 +342,7 @@
         <button class="nav-btn" id="nav-cards" onclick="showScreen('cards')"><span class="nav-btn-icon">🎴</span><span class="nav-btn-label">Карточки</span></button>
         <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')"><span class="nav-btn-icon">📊</span><span class="nav-btn-label">Статистика</span></button>
     </nav>
+    <button class="fab-circle" id="fabCircle" onclick="showScreen('add')">＋</button>
 
     <!-- Edit Modal -->
     <div class="modal-overlay" id="editModal" onclick="closeEditModal()">
@@ -407,6 +414,7 @@ async function init() {
 }
 
 function showApp() {
+    document.getElementById("fabCircle").style.display = "flex";
     document.getElementById('onboarding').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     updateHeaderUI(); renderWordsList();
@@ -743,6 +751,8 @@ function updateHeaderUI() {
 }
 
 function showScreen(name) {
+    const fab = document.getElementById("fabCircle");
+    if (fab) fab.style.display = name === "words" ? "flex" : "none";
     closeAllSwipes();
     document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
