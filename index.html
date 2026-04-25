@@ -8,893 +8,280 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* ===== VARIABLES ===== */
         :root {
-            --accent:       #a855f7;
-            --accent-2:     #7c3aed;
-            --accent-dim:   rgba(168, 85, 247, 0.15);
-            --accent-glow:  rgba(168, 85, 247, 0.35);
-            --bg:           #0f0f13;
-            --surface:      #1a1a22;
-            --surface-2:    #22222e;
-            --surface-3:    #2a2a38;
-            --border:       rgba(255, 255, 255, 0.07);
-            --border-focus: rgba(168, 85, 247, 0.5);
-            --text:         #f0f0f5;
-            --text-dim:     #c0c0d0;
-            --muted:        #787890;
-            --success:      #34d399;
-            --success-dim:  rgba(52, 211, 153, 0.15);
-            --danger:       #f87171;
-            --danger-dim:   rgba(248, 113, 113, 0.15);
-            --warning:      #fbbf24;
-            --warning-dim:  rgba(251, 191, 36, 0.15);
+            --accent:      #a855f7;
+            --accent-2:    #7c3aed;
+            --accent-dim:  rgba(168,85,247,0.15);
+            --accent-glow: rgba(168,85,247,0.35);
+            --bg:          #0f0f13;
+            --surface:     #1a1a22;
+            --surface-2:   #22222e;
+            --surface-3:   #2a2a38;
+            --border:      rgba(255,255,255,0.07);
+            --text:        #f0f0f5;
+            --text-dim:    #c0c0d0;
+            --muted:       #787890;
+            --success:     #34d399;
+            --success-dim: rgba(52,211,153,0.15);
+            --danger:      #f87171;
+            --danger-dim:  rgba(248,113,113,0.15);
+            --warning:     #fbbf24;
+            --warning-dim: rgba(251,191,36,0.15);
         }
-
-        /* ===== RESET ===== */
-        *, *::before, *::after {
-            margin: 0; padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
         body {
-            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            padding-bottom: 90px;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
+            font-family:'Outfit',-apple-system,sans-serif;
+            background:var(--bg); color:var(--text);
+            min-height:100vh; padding-bottom:90px;
+            overflow-x:hidden; -webkit-font-smoothing:antialiased;
         }
-
-        /* Ambient light */
         body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 50%;
-            transform: translateX(-50%);
-            width: 700px; height: 350px;
-            background: radial-gradient(ellipse at top, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
+            content:''; position:fixed; top:0; left:50%; transform:translateX(-50%);
+            width:700px; height:350px;
+            background:radial-gradient(ellipse at top,rgba(168,85,247,0.1) 0%,transparent 70%);
+            pointer-events:none; z-index:0;
         }
 
-        /* ===== KEYFRAMES ===== */
+        /* KEYFRAMES */
         @keyframes splashBounce {
-            0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
-            60%  { transform: scale(1.2) rotate(8deg);  opacity: 1; }
-            80%  { transform: scale(0.92) rotate(-3deg); }
-            100% { transform: scale(1) rotate(0deg);    opacity: 1; }
+            0%  { transform:scale(0) rotate(-15deg); opacity:0; }
+            60% { transform:scale(1.2) rotate(8deg);  opacity:1; }
+            80% { transform:scale(0.92) rotate(-3deg); }
+            100%{ transform:scale(1) rotate(0);        opacity:1; }
         }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0);    }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to   { opacity: 1; }
-        }
-        @keyframes slideInUp {
-            from { opacity: 0; transform: translateY(28px); }
-            to   { opacity: 1; transform: translateY(0);    }
-        }
-        @keyframes wordItemIn {
-            from { opacity: 0; transform: translateX(-12px); }
-            to   { opacity: 1; transform: translateX(0);     }
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1);    }
-            50%       { transform: scale(1.08); }
-        }
-        @keyframes bounce {
-            0%, 100% { transform: scale(1);    }
-            30%       { transform: scale(1.14); }
-            60%       { transform: scale(0.95); }
-        }
-        @keyframes confettiFall {
-            0%   { transform: translateY(-10px) rotate(0deg);    opacity: 1; }
-            100% { transform: translateY(110vh) rotate(540deg);  opacity: 0; }
-        }
-        @keyframes shimmer {
-            0%   { background-position: -200% center; }
-            100% { background-position:  200% center; }
-        }
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+        @keyframes slideInUp{ from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes rowIn    { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes pulse    { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        @keyframes bounce   { 0%,100%{transform:scale(1)} 30%{transform:scale(1.14)} 60%{transform:scale(0.95)} }
+        @keyframes confettiFall { 0%{transform:translateY(-10px) rotate(0);opacity:1} 100%{transform:translateY(110vh) rotate(540deg);opacity:0} }
 
-        /* ===== SPLASH ===== */
+        /* SPLASH */
         #splash {
-            position: fixed; inset: 0;
-            z-index: 2000;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
+            position:fixed; inset:0; z-index:2000; background:var(--bg);
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
         }
-        #splash .pill-icon {
-            font-size: 76px;
-            animation: splashBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            filter: drop-shadow(0 0 30px var(--accent-glow));
-        }
-        #splash .app-name {
-            font-size: 38px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #ffffff 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            opacity: 0;
-            animation: fadeInUp 0.5s ease 0.45s forwards;
-        }
-        #splash .tagline {
-            font-size: 15px;
-            color: var(--muted);
-            font-weight: 500;
-            opacity: 0;
-            animation: fadeIn 0.5s ease 0.7s forwards;
-        }
+        #splash .pill-icon { font-size:76px; animation:splashBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards; filter:drop-shadow(0 0 30px var(--accent-glow)); }
+        #splash .app-name  { font-size:38px; font-weight:800; background:linear-gradient(135deg,#fff,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; opacity:0; animation:fadeInUp 0.5s ease 0.45s forwards; }
+        #splash .tagline   { font-size:15px; color:var(--muted); opacity:0; animation:fadeIn 0.5s ease 0.7s forwards; }
 
-        /* ===== ONBOARDING ===== */
+        /* ONBOARDING */
         #onboarding {
-            position: fixed; inset: 0;
-            z-index: 1500;
-            background: var(--bg);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 32px 24px;
-            text-align: center;
-            gap: 22px;
+            position:fixed; inset:0; z-index:1500; background:var(--bg);
+            display:none; flex-direction:column; align-items:center; justify-content:center;
+            padding:32px 24px; text-align:center; gap:22px;
         }
-        #onboarding.visible { display: flex; }
-        .ob-icon {
-            font-size: 60px;
-            filter: drop-shadow(0 0 22px var(--accent-glow));
-            animation: pulse 2.5s ease-in-out infinite;
-        }
-        .ob-title {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-            line-height: 1.2;
-        }
-        .ob-title span {
-            background: linear-gradient(135deg, #ffffff 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .ob-desc {
-            font-size: 15px;
-            color: var(--muted);
-            line-height: 1.65;
-            max-width: 310px;
-        }
-        .ob-features {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            max-width: 320px;
-        }
-        .ob-feature {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 15px 18px;
-            text-align: left;
-            animation: fadeInUp 0.4s ease both;
-        }
-        .ob-feature:nth-child(1) { animation-delay: 0.1s; }
-        .ob-feature:nth-child(2) { animation-delay: 0.2s; }
-        .ob-feature:nth-child(3) { animation-delay: 0.3s; }
-        .ob-feature-icon { font-size: 26px; flex-shrink: 0; }
-        .ob-feature-text { }
-        .ob-feature-text strong {
-            display: block;
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 2px;
-        }
-        .ob-feature-text span {
-            font-size: 13px;
-            color: var(--muted);
-        }
+        #onboarding.visible { display:flex; }
+        .ob-icon  { font-size:60px; filter:drop-shadow(0 0 22px var(--accent-glow)); animation:pulse 2.5s ease-in-out infinite; }
+        .ob-title { font-size:28px; font-weight:800; }
+        .ob-title span { background:linear-gradient(135deg,#fff,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .ob-desc  { font-size:15px; color:var(--muted); line-height:1.65; max-width:310px; }
+        .ob-features { display:flex; flex-direction:column; gap:10px; width:100%; max-width:320px; }
+        .ob-feature { display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:15px 18px; text-align:left; animation:fadeInUp 0.4s ease both; }
+        .ob-feature:nth-child(1){animation-delay:.1s} .ob-feature:nth-child(2){animation-delay:.2s} .ob-feature:nth-child(3){animation-delay:.3s}
+        .ob-feature-icon { font-size:26px; flex-shrink:0; }
+        .ob-feature-text strong { display:block; font-size:14px; font-weight:700; color:var(--text); margin-bottom:2px; }
+        .ob-feature-text span   { font-size:13px; color:var(--muted); }
 
-        /* ===== HEADER ===== */
+        /* HEADER */
         .header {
-            position: sticky;
-            top: 0;
-            z-index: 500;
-            padding: 14px 18px 11px;
-            background: rgba(15, 15, 19, 0.88);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid var(--border);
+            position:sticky; top:0; z-index:500;
+            padding:14px 18px 11px;
+            background:rgba(15,15,19,0.88); backdrop-filter:blur(24px);
+            border-bottom:1px solid var(--border);
         }
-        .header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .header-logo {
-            font-size: 21px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-            background: linear-gradient(135deg, #ffffff 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .streak-badge {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            padding: 5px 13px;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text);
-            transition: transform 0.2s;
-        }
-        .streak-badge:active { transform: scale(0.95); }
-        .header-sub {
-            margin-top: 5px;
-            font-size: 13px;
-            color: var(--muted);
-            font-weight: 500;
-        }
-        .header-sub .due-chip {
-            display: inline-block;
-            background: var(--danger-dim);
-            color: var(--danger);
-            border-radius: 8px;
-            padding: 1px 7px;
-            font-size: 12px;
-            font-weight: 700;
-            margin-left: 4px;
-        }
+        .header-top { display:flex; align-items:center; justify-content:space-between; }
+        .header-logo { font-size:21px; font-weight:800; background:linear-gradient(135deg,#fff,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .streak-badge { display:flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border); border-radius:22px; padding:5px 13px; font-size:13px; font-weight:700; cursor:pointer; transition:transform 0.2s; }
+        .streak-badge:active { transform:scale(0.95); }
+        .header-sub { margin-top:5px; font-size:13px; color:var(--muted); font-weight:500; }
+        .due-chip { display:inline-block; background:var(--danger-dim); color:var(--danger); border-radius:8px; padding:1px 7px; font-size:12px; font-weight:700; margin-left:4px; }
 
-        /* ===== SCREENS ===== */
-        .screen {
-            display: none;
-            padding: 16px 16px 8px;
-            position: relative;
-            z-index: 1;
-        }
-        .screen.active {
-            display: block;
-            animation: slideInUp 0.3s ease;
-        }
+        /* SCREENS */
+        .screen { display:none; padding:16px 16px 8px; position:relative; z-index:1; }
+        .screen.active { display:block; animation:slideInUp 0.3s ease; }
 
-        /* ===== WORD LIST ===== */
-        .category-group { margin-bottom: 4px; }
-        .section-title {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.9px;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin: 20px 2px 10px;
-        }
-        .word-item {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 14px 16px;
-            margin-bottom: 0;
-            transition: transform 0.25s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-            z-index: 1;
-            overflow: hidden;
-        }
-        .word-item::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: linear-gradient(135deg, var(--accent-dim), transparent);
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .word-item:hover { border-color: rgba(168, 85, 247, 0.2); }
-        .word-item:hover::before { opacity: 1; }
+        /* WORD LIST */
+        .section-title { font-size:11px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:var(--muted); margin:20px 2px 10px; }
 
-        /* Swipe container */
-        .word-item-wrap {
-            position: relative;
-            margin-bottom: 8px;
-            border-radius: 18px;
-            overflow: hidden;
-            animation: wordItemIn 0.3s ease both;
+        /* SWIPE ROW */
+        .swipe-row {
+            position:relative; margin-bottom:8px; border-radius:18px; overflow:hidden;
+            animation:rowIn 0.3s ease both;
         }
-        .word-item-actions-swipe {
-            position: absolute;
-            right: 0; top: 0; bottom: 0;
-            display: flex;
-            align-items: stretch;
-            border-radius: 0 18px 18px 0;
-            overflow: hidden;
-            z-index: 0;
+        .swipe-actions {
+            position:absolute; right:0; top:0; bottom:0;
+            display:flex; align-items:stretch;
         }
         .swipe-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            width: 72px;
-            border: none;
-            cursor: pointer;
-            transition: filter 0.15s;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+            width:72px; border:none; cursor:pointer; font-family:'Outfit',sans-serif; transition:filter 0.15s;
         }
-        .swipe-btn:active { filter: brightness(0.85); }
-        .swipe-btn-icon { font-size: 20px; }
-        .swipe-btn-label { font-size: 11px; font-weight: 700; font-family: "Outfit", sans-serif; color: #fff; }
-        .swipe-btn-edit { background: #3b82f6; }
-        .swipe-btn-delete { background: var(--danger); }
-        .word-item-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+        .swipe-btn:active { filter:brightness(0.85); }
+        .swipe-btn-icon  { font-size:20px; }
+        .swipe-btn-label { font-size:11px; font-weight:700; color:#fff; }
+        .swipe-btn-edit   { background:#3b82f6; }
+        .swipe-btn-delete { background:var(--danger); border-radius:0 18px 18px 0; }
 
-        /* ===== EMPTY STATE ===== */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            animation: fadeInUp 0.4s ease;
+        .word-item {
+            position:relative; display:flex; align-items:center; gap:12px;
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:18px; padding:14px 16px;
+            transition:transform 0.25s ease; z-index:1;
+            will-change:transform;
         }
-        .empty-state-icon {
-            font-size: 56px;
-            margin-bottom: 14px;
-            opacity: 0.6;
-            filter: grayscale(0.3);
-        }
-        .empty-state-text {
-            font-size: 16px;
-            color: var(--muted);
-            line-height: 1.65;
-            margin-bottom: 24px;
-        }
+        .word-item-body { flex:1; min-width:0; }
+        .word-item-en   { font-size:16px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .word-item-ru   { font-size:13px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .word-item-footer { display:flex; align-items:center; gap:7px; margin-top:6px; flex-wrap:wrap; }
+        .status-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:2px 9px; border-radius:10px; }
+        .badge-new      { background:var(--accent-dim);   color:var(--accent);   }
+        .badge-learning { background:var(--warning-dim);  color:var(--warning);  }
+        .badge-mastered { background:var(--success-dim);  color:var(--success);  }
+        .badge-hard     { background:var(--danger-dim);   color:var(--danger);   }
+        .word-meta { font-size:11px; color:var(--muted); }
+        .due-dot   { width:7px; height:7px; border-radius:50%; background:var(--danger); box-shadow:0 0 6px rgba(248,113,113,0.6); flex-shrink:0; }
 
-        /* ===== ADD FORM ===== */
-        .form-group { margin-bottom: 18px; }
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--muted);
-            margin-bottom: 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        /* EMPTY */
+        .empty-state { text-align:center; padding:60px 20px; animation:fadeInUp 0.4s ease; }
+        .empty-state-icon { font-size:56px; margin-bottom:14px; opacity:.6; }
+        .empty-state-text { font-size:16px; color:var(--muted); line-height:1.65; margin-bottom:24px; }
+
+        /* FAB */
+        .fab {
+            display:flex; align-items:center; justify-content:center; gap:10px;
+            margin:20px 0 8px; padding:16px 28px; width:100%;
+            background:linear-gradient(135deg,var(--accent),var(--accent-2));
+            color:#fff; border:none; border-radius:20px;
+            font-size:16px; font-weight:700; font-family:'Outfit',sans-serif;
+            cursor:pointer; box-shadow:0 6px 28px var(--accent-glow); transition:all 0.18s;
         }
+        .fab:active { transform:scale(0.97); box-shadow:0 3px 14px var(--accent-glow); }
+
+        /* FORM */
+        .form-group { margin-bottom:18px; }
+        .form-label { display:block; font-size:13px; font-weight:700; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px; }
         .form-input {
-            width: 100%;
-            padding: 15px 17px;
-            background: var(--surface);
-            border: 1.5px solid var(--border);
-            border-radius: 16px;
-            font-size: 16px;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 500;
-            color: var(--text);
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-            -webkit-appearance: none;
+            width:100%; padding:15px 17px;
+            background:var(--surface); border:1.5px solid var(--border); border-radius:16px;
+            font-size:16px; font-family:'Outfit',sans-serif; font-weight:500; color:var(--text);
+            outline:none; transition:border-color 0.2s,box-shadow 0.2s; -webkit-appearance:none;
         }
-        .form-input::placeholder { color: var(--muted); font-weight: 400; }
-        .form-input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-dim);
-            background: var(--surface-2);
-        }
+        .form-input::placeholder { color:var(--muted); font-weight:400; }
+        .form-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); background:var(--surface-2); }
         .form-select {
-            width: 100%;
-            padding: 15px 17px;
-            background: var(--surface);
-            border: 1.5px solid var(--border);
-            border-radius: 16px;
-            font-size: 16px;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 500;
-            color: var(--text);
-            outline: none;
-            appearance: none;
-            cursor: pointer;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .form-select:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-dim);
+            width:100%; padding:15px 17px;
+            background:var(--surface); border:1.5px solid var(--border); border-radius:16px;
+            font-size:16px; font-family:'Outfit',sans-serif; font-weight:500; color:var(--text);
+            outline:none; appearance:none; cursor:pointer;
         }
         .translate-suggestion {
-            display: none;
-            margin-top: 10px;
-            padding: 12px 16px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            font-size: 14px;
-            color: var(--muted);
-            cursor: pointer;
-            transition: all 0.18s ease;
+            display:none; margin-top:10px; padding:12px 16px;
+            background:var(--surface-2); border:1px solid var(--border); border-radius:14px;
+            font-size:14px; color:var(--muted); cursor:pointer; transition:all 0.18s;
         }
-        .translate-suggestion:hover, .translate-suggestion:active {
-            background: var(--accent-dim);
-            border-color: var(--border-focus);
-            color: var(--text);
-        }
-        .translate-suggestion .suggestion-label { margin-right: 6px; }
-        .translate-suggestion .suggestion-value { color: var(--accent); font-weight: 600; }
+        .translate-suggestion:active { background:var(--accent-dim); border-color:var(--accent); color:var(--text); }
+        .suggestion-value { color:var(--accent); font-weight:600; }
 
-        /* ===== BUTTONS ===== */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 16px;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Outfit', sans-serif;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
-            letter-spacing: 0.2px;
-        }
-        .btn:active { transform: scale(0.97); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* BUTTONS */
+        .btn { display:block; width:100%; padding:16px; border:none; border-radius:16px; font-size:16px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; transition:all 0.15s; }
+        .btn:active   { transform:scale(0.97); }
+        .btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .btn-primary  { background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 6px 24px var(--accent-glow); }
+        .btn-secondary{ background:var(--surface-2); color:var(--text-dim); border:1px solid var(--border); margin-top:10px; }
+        .btn-wrong    { background:var(--danger-dim); color:var(--danger); border:1px solid rgba(248,113,113,.25); }
+        .btn-correct  { background:var(--success-dim); color:var(--success); border:1px solid rgba(52,211,153,.25); }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-            color: #fff;
-            box-shadow: 0 6px 24px var(--accent-glow);
-        }
-        .btn-primary:active { box-shadow: 0 2px 10px var(--accent-glow); }
-        .btn-primary:hover { box-shadow: 0 8px 28px var(--accent-glow); }
-
-        .btn-secondary {
-            background: var(--surface-2);
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-            margin-top: 10px;
-        }
-        .btn-wrong {
-            background: var(--danger-dim);
-            color: var(--danger);
-            border: 1px solid rgba(248, 113, 113, 0.25);
-        }
-        .btn-correct {
-            background: var(--success-dim);
-            color: var(--success);
-            border: 1px solid rgba(52, 211, 153, 0.25);
-        }
-
-        /* ===== FLASHCARDS ===== */
-        .card-header {
-            margin-bottom: 14px;
-        }
-        .card-meta-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-            color: var(--muted);
-            font-weight: 500;
-            margin-bottom: 10px;
-        }
-        .progress-bar {
-            height: 5px;
-            background: var(--surface-2);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--accent-2));
-            border-radius: 10px;
-            transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        /* CARDS */
+        .card-meta-row { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:10px; }
+        .progress-bar  { height:5px; background:var(--surface-2); border-radius:10px; overflow:hidden; margin-bottom:16px; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:10px; transition:width 0.45s ease; }
         .flashcard {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 26px;
-            padding: 40px 28px;
-            text-align: center;
-            cursor: pointer;
-            min-height: 210px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-            position: relative;
-            overflow: hidden;
+            background:var(--surface); border:1px solid var(--border); border-radius:26px;
+            padding:40px 28px; text-align:center; cursor:pointer; min-height:210px;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+            box-shadow:0 10px 40px rgba(0,0,0,.35); transition:transform 0.18s;
         }
-        .flashcard::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(168,85,247,0.4), transparent);
-        }
-        .flashcard:active { transform: scale(0.98); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
-        .flashcard-cat {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            color: var(--accent);
-        }
-        .flashcard-word {
-            font-size: 34px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            line-height: 1.15;
-        }
-        .flashcard-translation {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent);
-            animation: fadeInUp 0.25s ease;
-        }
-        .flashcard-tap-hint {
-            font-size: 14px;
-            color: var(--muted);
-            font-weight: 500;
-        }
-        .tap-hint-icon { margin-right: 5px; opacity: 0.6; }
-        .card-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-        }
-        .card-actions .btn { flex: 1; }
+        .flashcard:active { transform:scale(0.98); }
+        .flashcard-cat         { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--accent); }
+        .flashcard-word        { font-size:34px; font-weight:800; letter-spacing:-0.5px; }
+        .flashcard-translation { font-size:24px; font-weight:700; color:var(--accent); animation:fadeInUp 0.25s ease; }
+        .flashcard-hint        { font-size:14px; color:var(--muted); font-weight:500; }
+        .card-actions { display:flex; gap:12px; margin-top:16px; }
+        .card-actions .btn { flex:1; }
 
-        /* Session results */
-        .session-results {
-            text-align: center;
-            padding: 20px 0;
-            animation: slideInUp 0.4s ease;
-        }
-        .result-icon {
-            font-size: 72px;
-            margin-bottom: 14px;
-            display: block;
-        }
-        .result-icon.bounce { animation: bounce 0.6s ease 3; }
-        .result-title {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 6px;
-        }
-        .result-subtitle {
-            font-size: 14px;
-            color: var(--muted);
-            margin-bottom: 28px;
-        }
-        .result-stats {
-            display: flex;
-            justify-content: center;
-            gap: 28px;
-            margin-bottom: 28px;
-        }
-        .result-stat-val {
-            font-size: 40px;
-            font-weight: 800;
-            line-height: 1;
-        }
-        .result-stat-val.green { color: var(--success); }
-        .result-stat-val.red   { color: var(--danger);  }
-        .result-stat-label {
-            font-size: 13px;
-            color: var(--muted);
-            margin-top: 6px;
-            font-weight: 500;
-        }
+        /* SESSION RESULTS */
+        .session-results { text-align:center; padding:20px 0; animation:slideInUp 0.4s ease; }
+        .result-icon   { font-size:72px; margin-bottom:14px; display:block; }
+        .result-icon.bounce { animation:bounce 0.6s ease 3; }
+        .result-title  { font-size:24px; font-weight:800; margin-bottom:6px; }
+        .result-sub    { font-size:14px; color:var(--muted); margin-bottom:28px; }
+        .result-stats  { display:flex; justify-content:center; gap:28px; margin-bottom:28px; }
+        .result-val    { font-size:40px; font-weight:800; line-height:1; }
+        .result-val.green { color:var(--success); }
+        .result-val.red   { color:var(--danger); }
+        .result-label  { font-size:13px; color:var(--muted); margin-top:6px; font-weight:500; }
 
-        /* ===== STATS ===== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-        .stat-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px 16px;
-            text-align: center;
-            transition: transform 0.18s ease;
-        }
-        .stat-card:active { transform: scale(0.97); }
-        .stat-card.wide { grid-column: span 2; }
-        .stat-card-icon { font-size: 26px; margin-bottom: 8px; }
-        .stat-card-val {
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: 4px;
-        }
-        .stat-card-label {
-            font-size: 12px;
-            color: var(--muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .streak-card {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 12px;
-        }
-        .streak-fire { font-size: 36px; }
-        .streak-number { font-size: 36px; font-weight: 800; }
-        .streak-label { font-size: 13px; color: var(--muted); font-weight: 600; }
-        .sessions-list { margin-top: 4px; }
-        .session-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px 16px;
-            margin-bottom: 0;
-        }
-        .session-item-date { font-weight: 600; font-size: 14px; }
-        .session-item-info { font-size: 13px; color: var(--muted); margin-top: 2px; }
+        /* STATS */
+        .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        .stat-card  { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:20px 16px; text-align:center; }
+        .stat-icon  { font-size:26px; margin-bottom:8px; }
+        .stat-val   { font-size:32px; font-weight:800; line-height:1; margin-bottom:4px; }
+        .stat-label { font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+        .streak-card { display:flex; align-items:center; justify-content:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:20px; margin-bottom:12px; }
+        .session-item { display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:8px; }
+        .session-date { font-weight:600; font-size:14px; }
+        .session-info { font-size:13px; color:var(--muted); margin-top:2px; }
 
-        /* ===== CONFETTI ===== */
-        .confetti-bit {
-            position: fixed;
-            top: -10px;
-            border-radius: 3px;
-            animation: confettiFall linear forwards;
-            z-index: 9999;
-            pointer-events: none;
-        }
+        /* CONFETTI */
+        .confetti-bit { position:fixed; top:-10px; border-radius:3px; animation:confettiFall linear forwards; z-index:9999; pointer-events:none; }
 
-        /* ===== TOAST ===== */
-        .toast {
-            position: fixed;
-            bottom: 94px;
-            left: 50%;
-            transform: translateX(-50%) translateY(8px);
-            background: var(--surface-3);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 11px 22px;
-            border-radius: 26px;
-            font-size: 14px;
-            font-weight: 600;
-            z-index: 8000;
-            opacity: 0;
-            transition: opacity 0.25s ease, transform 0.25s ease;
-            pointer-events: none;
-            white-space: nowrap;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
-        }
-        .toast.visible {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
+        /* TOAST */
+        .toast { position:fixed; bottom:94px; left:50%; transform:translateX(-50%) translateY(8px); background:var(--surface-3); border:1px solid var(--border); color:var(--text); padding:11px 22px; border-radius:26px; font-size:14px; font-weight:600; z-index:8000; opacity:0; transition:all 0.25s; pointer-events:none; white-space:nowrap; box-shadow:0 4px 24px rgba(0,0,0,.5); }
+        .toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 
-        /* ===== BOTTOM NAV ===== */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            background: rgba(15, 15, 19, 0.94);
-            border-top: 1px solid var(--border);
-            display: flex;
-            padding: 10px 0;
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
-            z-index: 600;
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-        }
-        .nav-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 0;
-            color: var(--muted);
-            font-family: 'Outfit', sans-serif;
-            transition: color 0.2s ease;
-            position: relative;
-        }
-        .nav-btn.active { color: var(--accent); }
-        .nav-btn-icon { font-size: 23px; line-height: 1; }
-        .nav-btn-label {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .nav-btn::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%; transform: translateX(-50%);
-            width: 18px; height: 3px;
-            border-radius: 3px;
-            background: var(--accent);
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .nav-btn.active::after { opacity: 1; }
+        /* MODAL */
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); z-index:2000; display:flex; align-items:flex-end; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+        .modal-overlay.open { opacity:1; pointer-events:all; }
+        .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:28px; padding:28px 24px 24px; width:100%; max-width:380px; transform:translateY(40px); transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 -4px 40px rgba(0,0,0,.5); }
+        .modal-overlay.open .modal-box { transform:translateY(0); }
+        .modal-fire  { font-size:56px; filter:drop-shadow(0 0 20px rgba(251,191,36,0.6)); margin-bottom:10px; text-align:center; }
+        .modal-title { font-size:28px; font-weight:800; background:linear-gradient(135deg,#fbbf24,#f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:10px; text-align:center; }
+        .modal-desc  { font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:20px; text-align:center; }
+        .modal-rules { display:flex; flex-direction:column; gap:10px; margin-bottom:22px; }
+        .modal-rule  { display:flex; align-items:center; gap:12px; background:var(--surface-2); border-radius:14px; padding:12px 14px; font-size:13px; color:var(--text-dim); }
+        .modal-edit-title { font-size:18px; font-weight:800; margin-bottom:20px; }
 
-        /* ===== FAB — Floating Add Button ===== */
-        .fab {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 20px auto 8px;
-            padding: 16px 28px;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-            color: #fff;
-            border: none;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Outfit', sans-serif;
-            cursor: pointer;
-            box-shadow: 0 6px 28px var(--accent-glow);
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
-            width: calc(100% - 0px);
-            justify-content: center;
-        }
-        .fab:active {
-            transform: scale(0.97);
-            box-shadow: 0 3px 14px var(--accent-glow);
-        }
-        .fab-icon {
-            font-size: 22px;
-            line-height: 1;
-            font-style: normal;
-        }
-        .fab-label {
-            font-size: 16px;
-        }
-
-        /* ===== STREAK MODAL ===== */
-        .streak-badge { cursor: pointer; }
-        .streak-badge:active { transform: scale(0.93); }
-
-        .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(6px);
-            z-index: 2000;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            padding: 20px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease;
-        }
-        .modal-overlay.open {
-            opacity: 1;
-            pointer-events: all;
-        }
-        .modal-box {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 28px 24px 24px;
-            width: 100%;
-            max-width: 380px;
-            text-align: center;
-            transform: translateY(40px);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5);
-        }
-        .modal-overlay.open .modal-box {
-            transform: translateY(0);
-        }
-        .modal-fire {
-            font-size: 56px;
-            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
-            margin-bottom: 10px;
-        }
-        .modal-title {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-        }
-        .modal-desc {
-            font-size: 14px;
-            color: var(--muted);
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-        .modal-rules {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 22px;
-            text-align: left;
-        }
-        .modal-rule {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--surface-2);
-            border-radius: 14px;
-            padding: 12px 14px;
-            font-size: 13px;
-            color: var(--text-dim);
-        }
-        .modal-rule-icon { font-size: 18px; flex-shrink: 0; }
+        /* BOTTOM NAV */
+        .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:rgba(15,15,19,.95); border-top:1px solid var(--border); display:flex; padding:10px 0; padding-bottom:max(10px,env(safe-area-inset-bottom)); z-index:600; backdrop-filter:blur(24px); }
+        .nav-btn { flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 0; color:var(--muted); font-family:'Outfit',sans-serif; transition:color 0.2s; }
+        .nav-btn.active { color:var(--accent); }
+        .nav-btn-icon  { font-size:23px; line-height:1; }
+        .nav-btn-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
     </style>
 </head>
 <body>
 
-<!-- ===== SPLASH ===== -->
 <div id="splash">
     <div class="pill-icon">💊</div>
     <div class="app-name">WordPill</div>
     <div class="tagline">Учи слова. Каждый день.</div>
 </div>
 
-<!-- ===== ONBOARDING ===== -->
 <div id="onboarding">
     <div class="ob-icon">💊</div>
     <div class="ob-title"><span>Добро пожаловать!</span></div>
-    <p class="ob-desc">WordPill поможет тебе запомнить медицинский английский быстро и надолго</p>
+    <p class="ob-desc">WordPill поможет запомнить медицинский английский быстро и надолго</p>
     <div class="ob-features">
-        <div class="ob-feature">
-            <div class="ob-feature-icon">📚</div>
-            <div class="ob-feature-text">
-                <strong>Добавляй слова с урока</strong>
-                <span>Автоперевод подскажет значение</span>
-            </div>
-        </div>
-        <div class="ob-feature">
-            <div class="ob-feature-icon">🎴</div>
-            <div class="ob-feature-text">
-                <strong>Повторяй карточками</strong>
-                <span>Умный алгоритм — нужное вовремя</span>
-            </div>
-        </div>
-        <div class="ob-feature">
-            <div class="ob-feature-icon">🔥</div>
-            <div class="ob-feature-text">
-                <strong>Следи за прогрессом</strong>
-                <span>Streak и статистика мотивируют</span>
-            </div>
-        </div>
+        <div class="ob-feature"><div class="ob-feature-icon">📚</div><div class="ob-feature-text"><strong>Добавляй слова с урока</strong><span>Автоперевод подскажет значение</span></div></div>
+        <div class="ob-feature"><div class="ob-feature-icon">🎴</div><div class="ob-feature-text"><strong>Повторяй карточками</strong><span>Умный алгоритм — нужное вовремя</span></div></div>
+        <div class="ob-feature"><div class="ob-feature-icon">🔥</div><div class="ob-feature-text"><strong>Следи за прогрессом</strong><span>Streak и статистика мотивируют</span></div></div>
     </div>
     <button class="btn btn-primary" style="max-width:320px" onclick="finishOnboarding()">Начать! 🚀</button>
 </div>
 
-<!-- ===== APP ===== -->
 <div id="app" style="display:none">
-    <!-- Header -->
     <header class="header">
         <div class="header-top">
             <div class="header-logo">WordPill 💊</div>
@@ -903,13 +290,11 @@
         <div class="header-sub" id="headerSub">Загрузка...</div>
     </header>
 
-    <!-- Screens -->
     <div id="screen-words" class="screen active">
         <div id="wordsList"></div>
-        <!-- Floating Add Button -->
-        <button class="fab" onclick="showScreen('add')" id="fabAdd">
-            <span class="fab-icon">＋</span>
-            <span class="fab-label">Добавить слово</span>
+        <button class="fab" onclick="showScreen('add')">
+            <span style="font-size:22px;line-height:1">＋</span>
+            <span>Добавить слово</span>
         </button>
     </div>
 
@@ -918,8 +303,7 @@
             <label class="form-label">Слово (EN)</label>
             <input type="text" id="inputWord" class="form-input" placeholder="Например: auscultation" autocomplete="off" spellcheck="false">
             <div class="translate-suggestion" id="translateSuggestion" onclick="acceptSuggestion()">
-                <span class="suggestion-label">✨ Предложенный перевод:</span>
-                <span class="suggestion-value" id="suggestionText"></span>
+                ✨ Предложенный перевод: <span class="suggestion-value" id="suggestionText"></span>
             </div>
         </div>
         <div class="form-group">
@@ -941,51 +325,27 @@
         <button class="btn btn-primary" id="addBtn" onclick="addWord()">Добавить слово</button>
     </div>
 
-    <div id="screen-cards" class="screen">
-        <div id="cardsArea"></div>
-    </div>
+    <div id="screen-cards" class="screen"><div id="cardsArea"></div></div>
+    <div id="screen-stats" class="screen"><div id="statsArea"></div></div>
 
-    <div id="screen-stats" class="screen">
-        <div id="statsArea"></div>
-    </div>
-
-    <!-- Bottom nav -->
     <nav class="bottom-nav">
-        <button class="nav-btn active" id="nav-words" onclick="showScreen('words')">
-            <span class="nav-btn-icon">📚</span>
-            <span class="nav-btn-label">Слова</span>
-        </button>
-        <button class="nav-btn" id="nav-cards" onclick="showScreen('cards')">
-            <span class="nav-btn-icon">🎴</span>
-            <span class="nav-btn-label">Карточки</span>
-        </button>
-        <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')">
-            <span class="nav-btn-icon">📊</span>
-            <span class="nav-btn-label">Статистика</span>
-        </button>
+        <button class="nav-btn active" id="nav-words" onclick="showScreen('words')"><span class="nav-btn-icon">📚</span><span class="nav-btn-label">Слова</span></button>
+        <button class="nav-btn" id="nav-add" onclick="showScreen('add')"><span class="nav-btn-icon">➕</span><span class="nav-btn-label">Добавить</span></button>
+        <button class="nav-btn" id="nav-cards" onclick="showScreen('cards')"><span class="nav-btn-icon">🎴</span><span class="nav-btn-label">Карточки</span></button>
+        <button class="nav-btn" id="nav-stats" onclick="showScreen('stats')"><span class="nav-btn-icon">📊</span><span class="nav-btn-label">Статистика</span></button>
     </nav>
 
     <!-- Edit Modal -->
     <div class="modal-overlay" id="editModal" onclick="closeEditModal()">
-        <div class="modal-box" onclick="event.stopPropagation()" style="text-align:left">
-            <div style="font-size:18px;font-weight:800;margin-bottom:20px">✏️ Редактировать слово</div>
-            <div class="form-group">
-                <label class="form-label">Слово (EN)</label>
-                <input type="text" id="editWord" class="form-input" autocomplete="off">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Перевод (RU)</label>
-                <input type="text" id="editTranslation" class="form-input" autocomplete="off">
-            </div>
-            <div class="form-group" style="margin-bottom:20px">
-                <label class="form-label">Категория</label>
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-edit-title">✏️ Редактировать слово</div>
+            <div class="form-group"><label class="form-label">Слово (EN)</label><input type="text" id="editWord" class="form-input" autocomplete="off"></div>
+            <div class="form-group"><label class="form-label">Перевод (RU)</label><input type="text" id="editTranslation" class="form-input" autocomplete="off"></div>
+            <div class="form-group" style="margin-bottom:20px"><label class="form-label">Категория</label>
                 <select id="editCategory" class="form-select">
-                    <option value="general">Без категории</option>
-                    <option value="anatomy">Анатомия</option>
-                    <option value="pharma">Фармакология</option>
-                    <option value="obstetrics">Акушерство</option>
-                    <option value="symptoms">Симптомы</option>
-                    <option value="procedures">Процедуры</option>
+                    <option value="general">Без категории</option><option value="anatomy">Анатомия</option>
+                    <option value="pharma">Фармакология</option><option value="obstetrics">Акушерство</option>
+                    <option value="symptoms">Симптомы</option><option value="procedures">Процедуры</option>
                     <option value="lab">Лаборатория</option>
                 </select>
             </div>
@@ -1001,20 +361,11 @@
             <div class="modal-title" id="modalStreakNum">0 дней</div>
             <div class="modal-desc">Это твоя серия — сколько дней подряд ты открываешь WordPill.</div>
             <div class="modal-rules">
-                <div class="modal-rule">
-                    <span class="modal-rule-icon">✅</span>
-                    <span>Открой бот сегодня — серия продолжается</span>
-                </div>
-                <div class="modal-rule">
-                    <span class="modal-rule-icon">❌</span>
-                    <span>Пропусти день — серия сгорает</span>
-                </div>
-                <div class="modal-rule">
-                    <span class="modal-rule-icon">🎯</span>
-                    <span>Цель: 7, 14, 30 дней подряд</span>
-                </div>
+                <div class="modal-rule"><span style="font-size:18px">✅</span><span>Открой бот сегодня — серия продолжается</span></div>
+                <div class="modal-rule"><span style="font-size:18px">❌</span><span>Пропусти день — серия сгорает</span></div>
+                <div class="modal-rule"><span style="font-size:18px">🎯</span><span>Цель: 7, 14, 30 дней подряд</span></div>
             </div>
-            <button class="btn btn-primary" onclick="closeStreakModal()" style="margin-top:4px">Понятно!</button>
+            <button class="btn btn-primary" onclick="closeStreakModal()">Понятно!</button>
         </div>
     </div>
 </div>
@@ -1022,807 +373,375 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    // ════════════════════════════════════════════
-    // CONFIG
-    // ════════════════════════════════════════════
-    const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
+const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const CATEGORY_LABELS = {
-        general:    'Общее',
-        anatomy:    'Анатомия',
-        pharma:     'Фармакология',
-        obstetrics: 'Акушерство',
-        symptoms:   'Симптомы',
-        procedures: 'Процедуры',
-        lab:        'Лаборатория'
-    };
+const CATEGORY_LABELS = { general:'Общее', anatomy:'Анатомия', pharma:'Фармакология', obstetrics:'Акушерство', symptoms:'Симптомы', procedures:'Процедуры', lab:'Лаборатория' };
+const STATUS_LABELS   = { new:'Новое', learning:'Учу', mastered:'Выучено', hard:'Сложное' };
 
-    const STATUS_LABELS = {
-        new:      'Новое',
-        learning: 'Учу',
-        mastered: 'Выучено',
-        hard:     'Сложное'
-    };
+let tg = window.Telegram?.WebApp;
+let currentUser = null, words = [], session = null, transTimer = null, editingId = null;
 
-    // ════════════════════════════════════════════
-    // STATE
-    // ════════════════════════════════════════════
-    const { createClient } = supabase;
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init() {
+    if (tg) { tg.ready(); tg.expand(); }
+    const u = tg?.initDataUnsafe?.user;
+    currentUser = u?.id
+        ? { id:u.id, username:u.username||'', first_name:u.first_name||'', last_name:u.last_name||'', chat_id:tg?.initDataUnsafe?.chat?.id||u.id }
+        : { id:999999999, username:'dev', first_name:'Dev', last_name:'', chat_id:999999999 };
 
-    let tg          = window.Telegram?.WebApp;
-    let currentUser = null;
-    let words       = [];
-    let session     = null;
-    let transTimer  = null;
+    const isNew = await upsertUser();
+    await loadWords();
+    if (words.length === 0) await migrateFromCloudStorage();
 
-    // ════════════════════════════════════════════
-    // INIT
-    // ════════════════════════════════════════════
-    async function init() {
-        if (tg) { tg.ready(); tg.expand(); }
+    await delay(1900);
+    document.getElementById('splash').style.display = 'none';
+    if (isNew && words.length === 0) { document.getElementById('onboarding').classList.add('visible'); }
+    else showApp();
 
-        const u = tg?.initDataUnsafe?.user;
-        if (u?.id) {
-            currentUser = {
-                id:         u.id,
-                username:   u.username   || '',
-                first_name: u.first_name || '',
-                last_name:  u.last_name  || '',
-                chat_id:    tg?.initDataUnsafe?.chat?.id || u.id
-            };
-        } else {
-            currentUser = { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
+    document.getElementById('inputWord').addEventListener('input', onWordInput);
+}
+
+function showApp() {
+    document.getElementById('onboarding').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    updateHeaderUI(); renderWordsList();
+}
+function finishOnboarding() { showApp(); }
+
+// ── USER ──────────────────────────────────────────────────────────────────
+async function upsertUser() {
+    const today = todayStr();
+    const { data: ex } = await db.from('users').select('*').eq('id', currentUser.id).single();
+    if (!ex) {
+        await db.from('users').insert({ id:currentUser.id, username:currentUser.username, first_name:currentUser.first_name, last_name:currentUser.last_name, chat_id:currentUser.chat_id, streak_days:1, last_study_date:today });
+        currentUser.streak_days = 1; return true;
+    }
+    const yest = new Date(); yest.setDate(yest.getDate()-1);
+    const yStr = yest.toISOString().split('T')[0];
+    let streak = ex.streak_days || 0;
+    if (ex.last_study_date === yStr) streak++;
+    else if (ex.last_study_date !== today) streak = 1;
+    await db.from('users').update({ username:currentUser.username, first_name:currentUser.first_name, chat_id:currentUser.chat_id, last_seen:new Date().toISOString(), streak_days:streak, last_study_date:today }).eq('id', currentUser.id);
+    currentUser.streak_days = streak; return false;
+}
+
+// ── MIGRATION ─────────────────────────────────────────────────────────────
+async function migrateFromCloudStorage() {
+    if (!tg?.CloudStorage) return;
+    try {
+        const keys = await new Promise(r => tg.CloudStorage.getKeys((e,k) => r(e ? [] : k||[])));
+        if (!keys.length) return;
+        let found = null, foundKey = null;
+        for (const key of keys) {
+            const val = await new Promise(r => tg.CloudStorage.getItem(key,(e,v)=>r(e?null:v)));
+            if (!val) continue;
+            try { const p = JSON.parse(val); if (Array.isArray(p) && p.length && p[0].word) { found=p; foundKey=key; break; } } catch {}
         }
+        if (!found) return;
+        const toInsert = found.map(w=>({ user_id:currentUser.id, word:w.word||w.en||'', translation:w.translation||w.ru||'', category:w.category||'general', next_review:new Date().toISOString(), times_correct:w.correct||w.times_correct||0, times_wrong:w.wrong||w.times_wrong||0 })).filter(w=>w.word&&w.translation);
+        if (!toInsert.length) return;
+        const { data } = await db.from('words').insert(toInsert).select();
+        if (data?.length) { words=[...data,...words]; tg.CloudStorage.removeItem(foundKey,()=>{}); showToast('✅ Слова восстановлены!'); }
+    } catch(e) { console.warn('Migration error:',e); }
+}
 
-        const isNew = await upsertUser();
-        await loadWords();
+// ── WORDS CRUD ────────────────────────────────────────────────────────────
+async function loadWords() {
+    const { data } = await db.from('words').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+    words = data || [];
+}
 
-        // Миграция из Telegram CloudStorage → Supabase
-        if (words.length === 0) {
-            await migrateFromCloudStorage();
-            if (words.length > 0) {
-                showToast('✅ Слова восстановлены!');
-            }
-        }
+async function addWord() {
+    const word=document.getElementById('inputWord').value.trim();
+    const translation=document.getElementById('inputTranslation').value.trim();
+    const category=document.getElementById('inputCategory').value;
+    if (!word||!translation) { showToast('Заполни оба поля'); return; }
+    const btn=document.getElementById('addBtn');
+    btn.disabled=true; btn.textContent='Добавляю...';
+    const { data,error } = await db.from('words').insert({ user_id:currentUser.id, word, translation, category, next_review:new Date().toISOString() }).select().single();
+    btn.disabled=false; btn.textContent='Добавить слово';
+    if (error) { showToast('Ошибка добавления'); return; }
+    words.unshift(data);
+    document.getElementById('inputWord').value='';
+    document.getElementById('inputTranslation').value='';
+    document.getElementById('translateSuggestion').style.display='none';
+    updateHeaderUI(); renderWordsList();
+    showToast('✅ Слово добавлено!'); showScreen('words');
+}
 
-        await delay(1900);
-        document.getElementById('splash').style.display = 'none';
+async function deleteWord(id) {
+    await db.from('words').delete().eq('id',id);
+    words=words.filter(w=>w.id!==id);
+    updateHeaderUI(); renderWordsList(); showToast('Слово удалено');
+}
 
-        if (isNew && words.length === 0) {
-            document.getElementById('onboarding').classList.add('visible');
-        } else {
-            showApp();
-        }
+// ── EDIT ──────────────────────────────────────────────────────────────────
+function openEditModal(id) {
+    const w = words.find(w=>w.id===id); if (!w) return;
+    editingId = id;
+    document.getElementById('editWord').value = w.word;
+    document.getElementById('editTranslation').value = w.translation;
+    document.getElementById('editCategory').value = w.category||'general';
+    document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); editingId=null; }
+async function saveEdit() {
+    const word=document.getElementById('editWord').value.trim();
+    const translation=document.getElementById('editTranslation').value.trim();
+    const category=document.getElementById('editCategory').value;
+    if (!word||!translation) { showToast('Заполни оба поля'); return; }
+    await db.from('words').update({word,translation,category}).eq('id',editingId);
+    const idx=words.findIndex(w=>w.id===editingId);
+    if (idx>=0) words[idx]={...words[idx],word,translation,category};
+    closeEditModal(); renderWordsList(); showToast('✅ Сохранено!');
+}
 
-        document.getElementById('inputWord').addEventListener('input', onWordInput);
+// ── RENDER WORDS + SWIPE ──────────────────────────────────────────────────
+function renderWordsList() {
+    const container = document.getElementById('wordsList');
+    if (!words.length) {
+        container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📭</div><p class="empty-state-text">Словарик пуст.<br>Нажми кнопку ниже чтобы добавить первое слово!</p></div>`;
+        return;
     }
-
-    // ════════════════════════════════════════════
-    // MIGRATION: Telegram CloudStorage → Supabase
-    // ════════════════════════════════════════════
-    async function migrateFromCloudStorage() {
-        if (!tg?.CloudStorage) {
-            console.log('Migration: CloudStorage недоступен');
-            return;
-        }
-
-        try {
-            // Сначала смотрим все ключи в CloudStorage
-            const allKeys = await new Promise((resolve) => {
-                tg.CloudStorage.getKeys((err, keys) => {
-                    console.log('CloudStorage keys:', err, keys);
-                    resolve(err ? [] : (keys || []));
-                });
-            });
-
-            console.log('Все ключи в CloudStorage:', allKeys);
-
-            if (allKeys.length === 0) {
-                console.log('Migration: CloudStorage пуст');
-                return;
-            }
-
-            // Пробуем все возможные ключи где могут быть слова
-            const possibleKeys = allKeys.length > 0 ? allKeys : ['words', 'wordpill_words', 'vocab'];
-
-            let foundWords = null;
-            let foundKey = null;
-
-            for (const key of possibleKeys) {
-                const val = await new Promise((resolve) => {
-                    tg.CloudStorage.getItem(key, (err, v) => {
-                        console.log(`CloudStorage[${key}]:`, err, v ? v.substring(0, 100) : null);
-                        resolve(err ? null : v);
-                    });
-                });
-
-                if (!val) continue;
-
-                try {
-                    const parsed = JSON.parse(val);
-                    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].word) {
-                        foundWords = parsed;
-                        foundKey = key;
-                        console.log(`Нашли слова в ключе "${key}":`, parsed.length, 'слов');
-                        break;
-                    }
-                } catch (e) {
-                    console.log(`Ключ "${key}" не JSON или неверный формат`);
-                }
-            }
-
-            if (!foundWords || foundWords.length === 0) {
-                console.log('Migration: слова не найдены ни в одном ключе');
-                return;
-            }
-
-            // Вставляем в Supabase
-            const toInsert = foundWords.map(w => ({
-                user_id:       currentUser.id,
-                word:          w.word        || w.en    || '',
-                translation:   w.translation || w.ru    || '',
-                category:      w.category    || 'general',
-                next_review:   new Date().toISOString(),
-                times_correct: w.correct     || w.times_correct || 0,
-                times_wrong:   w.wrong       || w.times_wrong   || 0
-            })).filter(w => w.word && w.translation);
-
-            if (toInsert.length === 0) return;
-
-            console.log('Мигрируем', toInsert.length, 'слов в Supabase...');
-            const { data, error } = await db.from('words').insert(toInsert).select();
-
-            if (error) {
-                console.error('Ошибка вставки:', error);
-                return;
-            }
-
-            if (data && data.length > 0) {
-                words = [...data, ...words];
-                console.log('Миграция успешна:', data.length, 'слов перенесено');
-                // Очищаем CloudStorage
-                tg.CloudStorage.removeItem(foundKey, () => {
-                    console.log('CloudStorage очищен');
-                });
-            }
-        } catch (e) {
-            console.error('Migration error:', e);
-        }
-    }
-
-    function showApp() {
-        document.getElementById('onboarding').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        updateHeaderUI();
-        renderWordsList();
-    }
-
-    function finishOnboarding() {
-        document.getElementById('onboarding').classList.remove('visible');
-        document.getElementById('onboarding').style.display = 'none';
-        showApp();
-    }
-
-    // ════════════════════════════════════════════
-    // USER / STREAK
-    // ════════════════════════════════════════════
-    async function upsertUser() {
-        const today = todayStr();
-        const { data: existing } = await db
-            .from('users').select('*')
-            .eq('id', currentUser.id).single();
-
-        if (!existing) {
-            await db.from('users').insert({
-                id:             currentUser.id,
-                username:       currentUser.username,
-                first_name:     currentUser.first_name,
-                last_name:      currentUser.last_name,
-                chat_id:        currentUser.chat_id,
-                streak_days:    1,
-                last_study_date: today
-            });
-            currentUser.streak_days = 1;
-            return true; // isNew
-        }
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yStr = yesterday.toISOString().split('T')[0];
-
-        let streak = existing.streak_days || 0;
-        if (existing.last_study_date === yStr)    streak += 1;
-        else if (existing.last_study_date !== today) streak = 1;
-
-        await db.from('users').update({
-            username:        currentUser.username,
-            first_name:      currentUser.first_name,
-            chat_id:         currentUser.chat_id,
-            last_seen:       new Date().toISOString(),
-            streak_days:     streak,
-            last_study_date: today
-        }).eq('id', currentUser.id);
-
-        currentUser.streak_days = streak;
-        return false;
-    }
-
-    // ════════════════════════════════════════════
-    // WORDS — CRUD
-    // ════════════════════════════════════════════
-    async function loadWords() {
-        const { data } = await db
-            .from('words').select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-        words = data || [];
-    }
-
-    async function addWord() {
-        const word        = document.getElementById('inputWord').value.trim();
-        const translation = document.getElementById('inputTranslation').value.trim();
-        const category    = document.getElementById('inputCategory').value;
-
-        if (!word || !translation) { showToast('Заполни оба поля'); return; }
-
-        const btn = document.getElementById('addBtn');
-        btn.disabled    = true;
-        btn.textContent = 'Добавляю...';
-
-        const { data, error } = await db.from('words').insert({
-            user_id:     currentUser.id,
-            word,
-            translation,
-            category,
-            next_review: new Date().toISOString()
-        }).select().single();
-
-        btn.disabled    = false;
-        btn.textContent = 'Добавить слово';
-
-        if (error) { showToast('Ошибка при добавлении'); return; }
-
-        words.unshift(data);
-        document.getElementById('inputWord').value        = '';
-        document.getElementById('inputTranslation').value = '';
-        document.getElementById('translateSuggestion').style.display = 'none';
-
-        updateHeaderUI();
-        renderWordsList();
-        showToast('✅ Слово добавлено!');
-        showScreen('words');
-    }
-
-    async function deleteWord(id) {
-        await db.from('words').delete().eq('id', id);
-        words = words.filter(w => w.id !== id);
-        updateHeaderUI();
-        renderWordsList();
-        showToast('Слово удалено');
-    }
-
-    function wordStatus(w) {
-
-    // ════════════════════════════════════════════
-    // WORDS — RENDER + SWIPE
-    // ════════════════════════════════════════════
-    let activeSwipe = null;
-
-    function renderWordsList() {
-        const container = document.getElementById('wordsList');
-        if (!words.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📭</div>
-                    <p class="empty-state-text">Словарик пуст.<br>Нажми ➕ чтобы добавить первое слово!</p>
-                </div>`;
-            return;
-        }
-
-        const now = new Date();
-        const byCategory = {};
-        words.forEach(w => {
-            const cat = w.category || 'general';
-            if (!byCategory[cat]) byCategory[cat] = [];
-            byCategory[cat].push(w);
-        });
-
-        let html = '';
-        Object.entries(byCategory).forEach(([cat, catWords]) => {
-            html += `<div class="category-group"><div class="section-title">${CATEGORY_LABELS[cat] || cat}</div>`;
-            catWords.forEach((w, i) => {
-                const isDue  = new Date(w.next_review) <= now;
-                const status = wordStatus(w);
-                const total  = (w.times_correct || 0) + (w.times_wrong || 0);
-                const delay  = Math.min(i * 40, 300);
-                html += `
-                <div class="word-item-wrap" data-id="${w.id}" style="animation-delay:${delay}ms">
-                    <div class="word-item-actions-swipe">
-                        <button class="swipe-btn swipe-btn-edit" onclick="openEditModal(${w.id})">
-                            <span class="swipe-btn-icon">✏️</span>
-                            <span class="swipe-btn-label">Изменить</span>
-                        </button>
-                        <button class="swipe-btn swipe-btn-delete" onclick="deleteWord(${w.id})">
-                            <span class="swipe-btn-icon">🗑️</span>
-                            <span class="swipe-btn-label">Удалить</span>
-                        </button>
-                    </div>
-                    <div class="word-item" id="wi-${w.id}" style="animation-delay:${delay}ms">
-                        <div class="word-item-body">
-                            <div class="word-item-en">${escHtml(w.word)}</div>
-                            <div class="word-item-ru">${escHtml(w.translation)}</div>
-                            <div class="word-item-footer">
-                                <span class="status-badge badge-${status}">${STATUS_LABELS[status]}</span>
-                                ${isDue && total > 0 ? '<span class="due-dot"></span>' : ''}
-                                ${total > 0 ? `<span class="word-meta">✓${w.times_correct || 0} · ✗${w.times_wrong || 0} · ${w.interval_days || 1}д</span>` : ''}
-                            </div>
+    const now = new Date();
+    const byCategory = {};
+    words.forEach(w=>{ const c=w.category||'general'; if(!byCategory[c]) byCategory[c]=[]; byCategory[c].push(w); });
+    let html='';
+    Object.entries(byCategory).forEach(([cat,catWords])=>{
+        html+=`<div class="section-title">${CATEGORY_LABELS[cat]||cat}</div>`;
+        catWords.forEach((w,i)=>{
+            const isDue=new Date(w.next_review)<=now, status=wordStatus(w);
+            const total=(w.times_correct||0)+(w.times_wrong||0);
+            html+=`<div class="swipe-row" style="animation-delay:${Math.min(i*40,300)}ms">
+                <div class="swipe-actions">
+                    <button class="swipe-btn swipe-btn-edit" onclick="openEditModal(${w.id})"><span class="swipe-btn-icon">✏️</span><span class="swipe-btn-label">Изменить</span></button>
+                    <button class="swipe-btn swipe-btn-delete" onclick="deleteWord(${w.id})"><span class="swipe-btn-icon">🗑️</span><span class="swipe-btn-label">Удалить</span></button>
+                </div>
+                <div class="word-item" id="wi-${w.id}">
+                    <div class="word-item-body">
+                        <div class="word-item-en">${escHtml(w.word)}</div>
+                        <div class="word-item-ru">${escHtml(w.translation)}</div>
+                        <div class="word-item-footer">
+                            <span class="status-badge badge-${status}">${STATUS_LABELS[status]}</span>
+                            ${isDue&&total>0?'<span class="due-dot"></span>':''}
+                            ${total>0?`<span class="word-meta">✓${w.times_correct||0} · ✗${w.times_wrong||0} · ${w.interval_days||1}д</span>`:''}
                         </div>
                     </div>
-                </div>`;
-            });
-            html += '</div>';
+                </div>
+            </div>`;
         });
+    });
+    container.innerHTML = html;
+    initSwipe();
+}
 
-        container.innerHTML = html;
-        initSwipe();
-    }
+function wordStatus(w) {
+    const t=(w.times_correct||0)+(w.times_wrong||0);
+    if (!t) return 'new';
+    const r=w.times_correct/t;
+    if (w.interval_days>=7&&r>=0.8) return 'mastered';
+    if (r<0.5) return 'hard';
+    return 'learning';
+}
 
-    function initSwipe() {
-        document.querySelectorAll('.word-item-wrap').forEach(wrap => {
-            const item = wrap.querySelector('.word-item');
-            const btns = wrap.querySelector('.word-item-actions-swipe');
-            const btnsW = 144; // 2 buttons * 72px
-            let startX = 0, startY = 0, isDragging = false, isOpen = false;
+// ── SWIPE ─────────────────────────────────────────────────────────────────
+let activeSwipeEl = null;
 
-            item.addEventListener('touchstart', e => {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                isDragging = false;
-            }, { passive: true });
+function initSwipe() {
+    document.querySelectorAll('.swipe-row').forEach(row=>{
+        const item = row.querySelector('.word-item');
+        const SNAP = 144;
+        let sx=0, sy=0, dragging=false, open=false;
 
-            item.addEventListener('touchmove', e => {
-                const dx = e.touches[0].clientX - startX;
-                const dy = e.touches[0].clientY - startY;
-                if (!isDragging && Math.abs(dx) < Math.abs(dy)) return;
-                isDragging = true;
+        item.addEventListener('touchstart', e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; dragging=false; }, {passive:true});
 
-                // Close other open swipes
-                if (activeSwipe && activeSwipe !== item) {
-                    activeSwipe.style.transform = 'translateX(0)';
-                    activeSwipe = null;
-                }
+        item.addEventListener('touchmove', e=>{
+            const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+            if (!dragging && Math.abs(dy)>Math.abs(dx)) return;
+            dragging=true;
+            if (activeSwipeEl && activeSwipeEl!==item) { activeSwipeEl.style.transform=''; activeSwipeEl=null; open=false; }
+            const x = open ? Math.max(-SNAP, Math.min(0, dx-SNAP)) : Math.max(-SNAP, Math.min(0, dx));
+            item.style.transform = `translateX(${x}px)`;
+        }, {passive:true});
 
-                const x = isOpen ? Math.min(0, dx - btnsW) : Math.min(0, dx);
-                if (x < 0) item.style.transform = `translateX(${Math.max(-btnsW, x)}px)`;
-            }, { passive: true });
-
-            item.addEventListener('touchend', e => {
-                if (!isDragging) return;
-                const dx = e.changedTouches[0].clientX - startX;
-                const threshold = 60;
-
-                if (!isOpen && dx < -threshold) {
-                    item.style.transform = `translateX(-${btnsW}px)`;
-                    isOpen = true;
-                    activeSwipe = item;
-                } else if (isOpen && dx > threshold) {
-                    item.style.transform = 'translateX(0)';
-                    isOpen = false;
-                    activeSwipe = null;
-                } else {
-                    item.style.transform = isOpen ? `translateX(-${btnsW}px)` : 'translateX(0)';
-                }
-            });
+        item.addEventListener('touchend', e=>{
+            if (!dragging) return;
+            const dx=e.changedTouches[0].clientX-sx;
+            if (!open && dx<-60)      { item.style.transform=`translateX(-${SNAP}px)`; open=true; activeSwipeEl=item; }
+            else if (open && dx>60)   { item.style.transform=''; open=false; activeSwipeEl=null; }
+            else                      { item.style.transform=open?`translateX(-${SNAP}px)`:''; }
         });
+    });
+}
 
-        // Close swipe on scroll
-        document.getElementById('screen-words').addEventListener('scroll', closeAllSwipes, { passive: true });
-    }
+function closeAllSwipes() { document.querySelectorAll('.word-item').forEach(i=>i.style.transform=''); activeSwipeEl=null; }
 
-    function closeAllSwipes() {
-        document.querySelectorAll('.word-item').forEach(i => i.style.transform = 'translateX(0)');
-        activeSwipe = null;
-    }
-
-    // ════════════════════════════════════════════
-    // EDIT WORD
-    // ════════════════════════════════════════════
-    let editingId = null;
-
-    function openEditModal(id) {
-        closeAllSwipes();
-        const w = words.find(w => w.id === id);
-        if (!w) return;
-        editingId = id;
-        document.getElementById('editWord').value = w.word;
-        document.getElementById('editTranslation').value = w.translation;
-        document.getElementById('editCategory').value = w.category || 'general';
-        document.getElementById('editModal').classList.add('open');
-    }
-
-    function closeEditModal() {
-        document.getElementById('editModal').classList.remove('open');
-        editingId = null;
-    }
-
-    async function saveEdit() {
-        const word        = document.getElementById('editWord').value.trim();
-        const translation = document.getElementById('editTranslation').value.trim();
-        const category    = document.getElementById('editCategory').value;
-        if (!word || !translation) { showToast('Заполни оба поля'); return; }
-
-        const { data, error } = await db.from('words')
-            .update({ word, translation, category })
-            .eq('id', editingId)
-            .select().single();
-
-        if (error) { showToast('Ошибка сохранения'); return; }
-
-        const idx = words.findIndex(w => w.id === editingId);
-        if (idx >= 0) words[idx] = { ...words[idx], word, translation, category };
-
-        closeEditModal();
-        renderWordsList();
-        showToast('✅ Сохранено!');
-    }
-
-        const total = (w.times_correct || 0) + (w.times_wrong || 0);
-        if (total === 0) return 'new';
-        const rate = w.times_correct / total;
-        if (w.interval_days >= 7 && rate >= 0.8) return 'mastered';
-        if (rate < 0.5) return 'hard';
-        return 'learning';
-    }
-
-    // ════════════════════════════════════════════
-    // AUTO-TRANSLATE
-    // ════════════════════════════════════════════
-    function onWordInput() {
-        const val = document.getElementById('inputWord').value.trim();
-        document.getElementById('translateSuggestion').style.display = 'none';
-        clearTimeout(transTimer);
-        if (val.length < 2) return;
-        transTimer = setTimeout(() => fetchTranslation(val), 700);
-    }
-
-    async function fetchTranslation(word) {
-        try {
-            const res  = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ru`);
-            const data = await res.json();
-            const tr   = data?.responseData?.translatedText;
-            if (tr && tr.toLowerCase() !== word.toLowerCase()) {
-                document.getElementById('suggestionText').textContent = tr;
-                document.getElementById('translateSuggestion').style.display = 'block';
-            }
-        } catch (_) {}
-    }
-
-    function acceptSuggestion() {
-        const text = document.getElementById('suggestionText').textContent;
-        document.getElementById('inputTranslation').value = text;
-        document.getElementById('translateSuggestion').style.display = 'none';
-    }
-
-    // ════════════════════════════════════════════
-    // SPACED REPETITION — SM-2
-    // ════════════════════════════════════════════
-    function sm2(word, quality) {
-        let ef  = word.ease_factor  || 2.5;
-        let id  = word.interval_days || 1;
-        let rep = word.repetitions  || 0;
-
-        if (quality === 0) {
-            rep = 0;
-            id  = 1;
-        } else {
-            if      (rep === 0) id = 1;
-            else if (rep === 1) id = 3;
-            else                id = Math.round(id * ef);
-
-            ef  = Math.max(1.3, ef + 0.1 - (1 - quality) * 0.08);
-            rep += 1;
+// ── AUTO-TRANSLATE ────────────────────────────────────────────────────────
+function onWordInput() {
+    const val=document.getElementById('inputWord').value.trim();
+    document.getElementById('translateSuggestion').style.display='none';
+    clearTimeout(transTimer);
+    if (val.length<2) return;
+    transTimer=setTimeout(()=>fetchTranslation(val), 700);
+}
+async function fetchTranslation(word) {
+    try {
+        const r=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ru`);
+        const d=await r.json();
+        const tr=d?.responseData?.translatedText;
+        if (tr&&tr.toLowerCase()!==word.toLowerCase()) {
+            document.getElementById('suggestionText').textContent=tr;
+            document.getElementById('translateSuggestion').style.display='block';
         }
+    } catch {}
+}
+function acceptSuggestion() {
+    document.getElementById('inputTranslation').value=document.getElementById('suggestionText').textContent;
+    document.getElementById('translateSuggestion').style.display='none';
+}
 
-        const next = new Date();
-        next.setDate(next.getDate() + id);
+// ── SM-2 ──────────────────────────────────────────────────────────────────
+function sm2(word, quality) {
+    let ef=word.ease_factor||2.5, id=word.interval_days||1, rep=word.repetitions||0;
+    if (quality===0) { rep=0; id=1; }
+    else { if(rep===0)id=1; else if(rep===1)id=3; else id=Math.round(id*ef); ef=Math.max(1.3,ef+0.1-(1-quality)*0.08); rep++; }
+    const nr=new Date(); nr.setDate(nr.getDate()+id);
+    return { ease_factor:ef, interval_days:id, repetitions:rep, next_review:nr.toISOString() };
+}
+function getDueWords() { const now=new Date(); return words.filter(w=>new Date(w.next_review)<=now); }
 
-        return {
-            ease_factor:  ef,
-            interval_days: id,
-            repetitions:  rep,
-            next_review:  next.toISOString()
-        };
-    }
+// ── CARDS ─────────────────────────────────────────────────────────────────
+function initCards() {
+    const due=getDueWords(), pool=due.length>0?due:[...words];
+    if (!pool.length) { document.getElementById('cardsArea').innerHTML=`<div class="empty-state"><div class="empty-state-icon">🎉</div><p class="empty-state-text">Нет слов для повторения.<br>Добавь новые!</p></div>`; return; }
+    const sorted=pool.sort((a,b)=>new Date(a.next_review)-new Date(b.next_review)).slice(0,Math.min(20,pool.length));
+    const cards=sorted.map(w=>({...w,reverse:Math.random()>0.5}));
+    session={cards,index:0,correct:0,wrong:0,revealed:false};
+    renderCard();
+}
 
-    function getDueWords() {
-        const now = new Date();
-        return words.filter(w => new Date(w.next_review) <= now);
-    }
-
-    // ════════════════════════════════════════════
-    // FLASHCARDS
-    // ════════════════════════════════════════════
-    function initCards() {
-        const due  = getDueWords();
-        const pool = due.length > 0 ? due : [...words];
-
-        if (!pool.length) {
-            document.getElementById('cardsArea').innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">🎉</div>
-                    <p class="empty-state-text">Нет слов для повторения.<br>Добавь новые!</p>
-                </div>`;
-            return;
-        }
-
-        // Двусторонние карточки: для каждого слова случайно EN→RU или RU→EN
-        const shuffled = pool.sort((a, b) => new Date(a.next_review) - new Date(b.next_review)).slice(0, Math.min(20, pool.length));
-        const cards = shuffled.map(w => ({ ...w, reverse: Math.random() > 0.5 }));
-        session = { cards, index: 0, correct: 0, wrong: 0, revealed: false };
-        renderCard();
-    }
-
-    function renderCard() {
-        const area = document.getElementById('cardsArea');
-
-        if (session.index >= session.cards.length) {
-            const total = session.cards.length;
-            const rate  = Math.round(session.correct / total * 100);
-            const emoji = rate >= 80 ? '🎉' : rate >= 50 ? '👍' : '💪';
-
-            if (rate >= 70) spawnConfetti();
-
-            area.innerHTML = `
-                <div class="session-results">
-                    <span class="result-icon ${rate >= 70 ? 'bounce' : ''}">${emoji}</span>
-                    <div class="result-title">Сессия завершена!</div>
-                    <div class="result-subtitle">Результат: ${rate}%</div>
-                    <div class="result-stats">
-                        <div>
-                            <div class="result-stat-val green">${session.correct}</div>
-                            <div class="result-stat-label">Знал</div>
-                        </div>
-                        <div>
-                            <div class="result-stat-val red">${session.wrong}</div>
-                            <div class="result-stat-label">Не знал</div>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" onclick="initCards()">🔄 Ещё раз</button>
-                    <button class="btn btn-secondary" onclick="showScreen('words')">К словам</button>
-                </div>`;
-
-            saveSession();
-            return;
-        }
-
-        const card = session.cards[session.index];
-        const pct  = Math.round(session.index / session.cards.length * 100);
-
-        area.innerHTML = `
-            <div class="card-header">
-                <div class="card-meta-row">
-                    <span>${session.index + 1} из ${session.cards.length}</span>
-                    <span>✓ ${session.correct} &nbsp; ✗ ${session.wrong}</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width:${pct}%"></div>
-                </div>
+function renderCard() {
+    const area=document.getElementById('cardsArea');
+    if (session.index>=session.cards.length) {
+        const rate=Math.round(session.correct/session.cards.length*100);
+        const emoji=rate>=80?'🎉':rate>=50?'👍':'💪';
+        if (rate>=70) spawnConfetti();
+        area.innerHTML=`<div class="session-results">
+            <span class="result-icon ${rate>=70?'bounce':''}">${emoji}</span>
+            <div class="result-title">Сессия завершена!</div>
+            <div class="result-sub">Результат: ${rate}%</div>
+            <div class="result-stats">
+                <div><div class="result-val green">${session.correct}</div><div class="result-label">Знал</div></div>
+                <div><div class="result-val red">${session.wrong}</div><div class="result-label">Не знал</div></div>
             </div>
-            <div class="flashcard" onclick="revealCard()">
-                <div class="flashcard-cat">${CATEGORY_LABELS[card.category] || card.category}${card.reverse ? " · RU→EN" : " · EN→RU"}</div>
-                <div class="flashcard-word">${card.reverse ? escHtml(card.translation) : escHtml(card.word)}</div>
-                ${session.revealed
-                    ? `<div class="flashcard-translation">${card.reverse ? escHtml(card.word) : escHtml(card.translation)}</div>`
-                    : `<div class="flashcard-tap-hint"><span class="tap-hint-icon">👆</span>Нажми, чтобы увидеть перевод</div>`
-                }
-            </div>
-            ${session.revealed ? `
-            <div class="card-actions">
-                <button class="btn btn-wrong"   onclick="answerCard(0)">✗ Не знал</button>
-                <button class="btn btn-correct" onclick="answerCard(1)">✓ Знал</button>
-            </div>` : ""}`;
+            <button class="btn btn-primary" onclick="initCards()">🔄 Ещё раз</button>
+            <button class="btn btn-secondary" onclick="showScreen('words')">К словам</button>
+        </div>`;
+        saveSession(); return;
     }
+    const card=session.cards[session.index];
+    const pct=Math.round(session.index/session.cards.length*100);
+    const front=card.reverse?escHtml(card.translation):escHtml(card.word);
+    const back=card.reverse?escHtml(card.word):escHtml(card.translation);
+    const dir=card.reverse?'RU→EN':'EN→RU';
+    area.innerHTML=`
+        <div class="card-meta-row"><span>${session.index+1} из ${session.cards.length}</span><span>✓${session.correct} ✗${session.wrong}</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="flashcard" onclick="revealCard()">
+            <div class="flashcard-cat">${CATEGORY_LABELS[card.category]||card.category} · ${dir}</div>
+            <div class="flashcard-word">${front}</div>
+            ${session.revealed?`<div class="flashcard-translation">${back}</div>`:`<div class="flashcard-hint">👆 Нажми, чтобы увидеть перевод</div>`}
+        </div>
+        ${session.revealed?`<div class="card-actions"><button class="btn btn-wrong" onclick="answerCard(0)">✗ Не знал</button><button class="btn btn-correct" onclick="answerCard(1)">✓ Знал</button></div>`:''}`;
+}
 
-    function revealCard() {
-        if (session.revealed) return;
-        session.revealed = true;
-        renderCard();
+function revealCard() { if(session.revealed)return; session.revealed=true; renderCard(); }
+
+async function answerCard(q) {
+    const card=session.cards[session.index];
+    if (q===1) session.correct++; else session.wrong++;
+    const upd=sm2(card,q);
+    const tc=(card.times_correct||0)+(q===1?1:0), tw=(card.times_wrong||0)+(q===0?1:0);
+    await db.from('words').update({...upd,times_correct:tc,times_wrong:tw}).eq('id',card.id);
+    const idx=words.findIndex(w=>w.id===card.id);
+    if (idx>=0) words[idx]={...words[idx],...upd,times_correct:tc,times_wrong:tw};
+    session.index++; session.revealed=false; renderCard();
+}
+
+async function saveSession() {
+    await db.from('study_sessions').insert({ user_id:currentUser.id, finished_at:new Date().toISOString(), cards_total:session.cards.length, cards_correct:session.correct });
+    updateHeaderUI(); renderWordsList();
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+async function renderStats() {
+    const area=document.getElementById('statsArea');
+    const total=words.length, due=getDueWords().length;
+    const mastered=words.filter(w=>wordStatus(w)==='mastered').length;
+    const tc=words.reduce((a,w)=>a+(w.times_correct||0),0);
+    const tw=words.reduce((a,w)=>a+(w.times_wrong||0),0);
+    const rate=tc+tw>0?Math.round(tc/(tc+tw)*100):0;
+    const {data:sessions}=await db.from('study_sessions').select('*').eq('user_id',currentUser.id).order('started_at',{ascending:false}).limit(5);
+    area.innerHTML=`
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-val">${total}</div><div class="stat-label">Слов</div></div>
+            <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-val" style="color:var(--success)">${mastered}</div><div class="stat-label">Выучено</div></div>
+            <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-val" style="color:${due>0?'var(--danger)':'var(--success)'}">${due}</div><div class="stat-label">К повторению</div></div>
+            <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-val" style="color:var(--accent)">${rate}%</div><div class="stat-label">Точность</div></div>
+        </div>
+        <div class="streak-card"><span style="font-size:36px">🔥</span><div><div class="stat-val">${currentUser.streak_days||0}</div><div class="stat-label">Дней подряд</div></div></div>
+        ${sessions?.length?`<div class="section-title">Последние сессии</div>${sessions.map(s=>{const r=s.cards_total>0?Math.round(s.cards_correct/s.cards_total*100):0;const date=new Date(s.started_at).toLocaleDateString('ru',{day:'numeric',month:'short'});return`<div class="session-item"><div><div class="session-date">${date}</div><div class="session-info">${s.cards_correct}/${s.cards_total} правильно</div></div><span class="status-badge ${r>=70?'badge-mastered':r>=50?'badge-learning':'badge-hard'}">${r}%</span></div>`;}).join('')}`:''}`;
+}
+
+// ── CONFETTI ──────────────────────────────────────────────────────────────
+function spawnConfetti() {
+    const pal=['#a855f7','#7c3aed','#34d399','#fbbf24','#f87171','#60a5fa'];
+    for(let i=0;i<65;i++){
+        const el=document.createElement('div'); el.className='confetti-bit';
+        const s=6+Math.random()*9;
+        el.style.cssText=`left:${Math.random()*100}vw;width:${s}px;height:${s}px;background:${pal[Math.floor(Math.random()*pal.length)]};animation-duration:${1.4+Math.random()*2.2}s;animation-delay:${Math.random()*0.6}s;border-radius:${Math.random()>.5?'50%':'3px'}`;
+        document.body.appendChild(el); setTimeout(()=>el.remove(),3500);
     }
+}
 
-    async function answerCard(quality) {
-        const card = session.cards[session.index];
-        if (quality === 1) session.correct++; else session.wrong++;
+// ── MODALS ────────────────────────────────────────────────────────────────
+function openStreakModal() {
+    const d=currentUser.streak_days||0;
+    document.getElementById('modalStreakNum').textContent=`🔥 ${d} ${d===1?'день':d<5?'дня':'дней'} подряд`;
+    document.getElementById('streakModal').classList.add('open');
+}
+function closeStreakModal() { document.getElementById('streakModal').classList.remove('open'); }
 
-        const updates = sm2(card, quality);
-        const tc = (card.times_correct || 0) + (quality === 1 ? 1 : 0);
-        const tw = (card.times_wrong   || 0) + (quality === 0 ? 1 : 0);
+// ── UI HELPERS ────────────────────────────────────────────────────────────
+function updateHeaderUI() {
+    const due=getDueWords().length, total=words.length;
+    document.getElementById('streakBadge').textContent=`🔥 ${currentUser.streak_days||0}`;
+    document.getElementById('headerSub').innerHTML=
+        total===0?'Добавь первое слово!':
+        due>0?`${total} слов · <span class="due-chip">${due} к повторению</span>`:
+        `${total} слов · всё повторено ✓`;
+}
 
-        await db.from('words').update({ ...updates, times_correct: tc, times_wrong: tw }).eq('id', card.id);
+function showScreen(name) {
+    closeAllSwipes();
+    document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    const screen=document.getElementById(`screen-${name}`);
+    screen.style.display='block'; void screen.offsetWidth; screen.classList.add('active');
+    const nb=document.getElementById(`nav-${name}`); if(nb) nb.classList.add('active');
+    if(name==='cards') initCards();
+    if(name==='stats') renderStats();
+}
 
-        const idx = words.findIndex(w => w.id === card.id);
-        if (idx >= 0) words[idx] = { ...words[idx], ...updates, times_correct: tc, times_wrong: tw };
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('visible'); setTimeout(()=>t.classList.remove('visible'),2600); }
+function escHtml(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function todayStr()  { return new Date().toISOString().split('T')[0]; }
+function delay(ms)   { return new Promise(r=>setTimeout(r,ms)); }
 
-        session.index++;
-        session.revealed = false;
-        renderCard();
-    }
-
-    async function saveSession() {
-        await db.from('study_sessions').insert({
-            user_id:       currentUser.id,
-            finished_at:   new Date().toISOString(),
-            cards_total:   session.cards.length,
-            cards_correct: session.correct
-        });
-        updateHeaderUI();
-        renderWordsList();
-    }
-
-    // ════════════════════════════════════════════
-    // STATS
-    // ════════════════════════════════════════════
-    async function renderStats() {
-        const area = document.getElementById('statsArea');
-
-        const total    = words.length;
-        const due      = getDueWords().length;
-        const mastered = words.filter(w => wordStatus(w) === 'mastered').length;
-        const tc       = words.reduce((a, w) => a + (w.times_correct || 0), 0);
-        const tw       = words.reduce((a, w) => a + (w.times_wrong   || 0), 0);
-        const rate     = tc + tw > 0 ? Math.round(tc / (tc + tw) * 100) : 0;
-
-        const { data: sessions } = await db
-            .from('study_sessions').select('*')
-            .eq('user_id', currentUser.id)
-            .order('started_at', { ascending: false })
-            .limit(5);
-
-        area.innerHTML = `
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-card-icon">📚</div>
-                    <div class="stat-card-val">${total}</div>
-                    <div class="stat-card-label">Слов</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-card-icon">🏆</div>
-                    <div class="stat-card-val" style="color:var(--success)">${mastered}</div>
-                    <div class="stat-card-label">Выучено</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-card-icon">⏰</div>
-                    <div class="stat-card-val" style="color:${due > 0 ? 'var(--danger)' : 'var(--success)'}">${due}</div>
-                    <div class="stat-card-label">К повторению</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-card-icon">🎯</div>
-                    <div class="stat-card-val" style="color:var(--accent)">${rate}%</div>
-                    <div class="stat-card-label">Точность</div>
-                </div>
-            </div>
-            <div class="streak-card">
-                <div class="streak-fire">🔥</div>
-                <div>
-                    <div class="streak-number">${currentUser.streak_days || 0}</div>
-                    <div class="streak-label">Дней подряд</div>
-                </div>
-            </div>
-            ${sessions && sessions.length ? `
-            <div class="section-title">Последние сессии</div>
-            <div class="sessions-list">
-                ${sessions.map(s => {
-                    const r    = s.cards_total > 0 ? Math.round(s.cards_correct / s.cards_total * 100) : 0;
-                    const date = new Date(s.started_at).toLocaleDateString('ru', { day: 'numeric', month: 'short' });
-                    const cls  = r >= 70 ? 'badge-mastered' : r >= 50 ? 'badge-learning' : 'badge-hard';
-                    return `
-                    <div class="session-item">
-                        <div>
-                            <div class="session-item-date">${date}</div>
-                            <div class="session-item-info">${s.cards_correct} из ${s.cards_total} правильно</div>
-                        </div>
-                        <span class="status-badge ${cls}">${r}%</span>
-                    </div>`;
-                }).join('')}
-            </div>` : ''}`;
-    }
-
-    // ════════════════════════════════════════════
-    // CONFETTI
-    // ════════════════════════════════════════════
-    function spawnConfetti() {
-        const palette = ['#a855f7', '#7c3aed', '#34d399', '#fbbf24', '#f87171', '#60a5fa', '#fb7185'];
-        for (let i = 0; i < 65; i++) {
-            const el = document.createElement('div');
-            el.className = 'confetti-bit';
-            const size = 6 + Math.random() * 9;
-            el.style.cssText = `
-                left: ${Math.random() * 100}vw;
-                width: ${size}px;
-                height: ${size}px;
-                background: ${palette[Math.floor(Math.random() * palette.length)]};
-                animation-duration: ${1.4 + Math.random() * 2.2}s;
-                animation-delay: ${Math.random() * 0.6}s;
-                border-radius: ${Math.random() > 0.5 ? '50%' : '3px'};
-            `;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 3500);
-        }
-    }
-
-    // ════════════════════════════════════════════
-    // UI HELPERS
-    // ════════════════════════════════════════════
-    function openStreakModal() {
-        const days = currentUser.streak_days || 0;
-        const label = days === 1 ? '1 день' : days < 5 ? `${days} дня` : `${days} дней`;
-        document.getElementById('modalStreakNum').textContent = `🔥 ${label} подряд`;
-        document.getElementById('streakModal').classList.add('open');
-    }
-
-    function closeStreakModal() {
-        document.getElementById('streakModal').classList.remove('open');
-    }
-
-    function updateHeaderUI() {
-        const due   = getDueWords().length;
-        const total = words.length;
-
-        document.getElementById('streakBadge').textContent = `🔥 ${currentUser.streak_days || 0}`;
-
-        let subHTML = '';
-        if (total === 0) {
-            subHTML = 'Добавь первое слово!';
-        } else if (due > 0) {
-            subHTML = `${total} слов · <span class="due-chip">${due} к повторению</span>`;
-        } else {
-            subHTML = `${total} слов · всё повторено ✓`;
-        }
-        document.getElementById('headerSub').innerHTML = subHTML;
-    }
-
-    function showScreen(name) {
-        document.querySelectorAll('.screen').forEach(s => {
-            s.classList.remove('active');
-            s.style.display = 'none';
-        });
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
-        const screen = document.getElementById(`screen-${name}`);
-        screen.style.display = 'block';
-        void screen.offsetWidth;
-        screen.classList.add('active');
-
-        const navBtn = document.getElementById(`nav-${name}`);
-        if (navBtn) navBtn.classList.add('active');
-
-        if (name === 'cards') initCards();
-        if (name === 'stats') renderStats();
-    }
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.classList.add('visible');
-        setTimeout(() => t.classList.remove('visible'), 2600);
-    }
-
-    function escHtml(str) {
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
-    function todayStr() { return new Date().toISOString().split('T')[0]; }
-    function delay(ms)  { return new Promise(r => setTimeout(r, ms)); }
-
-    // ════════════════════════════════════════════
-    // START
-    // ════════════════════════════════════════════
-    init().catch(err => console.error('WordPill init error:', err));
+init().catch(console.error);
 </script>
 </body>
 </html>
