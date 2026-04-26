@@ -176,6 +176,27 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .btn-add-cat { padding:12px 16px; border:none; border-radius:14px; background:var(--accent); color:#fff; font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; cursor:pointer; white-space:nowrap; transition:all 0.15s; }
 .btn-add-cat:active { transform:scale(0.96); }
 
+
+/* QUIZ MODE */
+.quiz-card { background:var(--surface); border:1px solid var(--border); border-radius:26px; padding:32px 24px; text-align:center; margin-bottom:16px; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+.quiz-question { font-size:28px; font-weight:800; letter-spacing:-0.5px; margin-bottom:8px; }
+.quiz-cat { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--accent); margin-bottom:20px; }
+.quiz-options { display:flex; flex-direction:column; gap:10px; }
+.quiz-option { padding:15px 18px; background:var(--surface2); border:1.5px solid var(--border); border-radius:16px; font-size:15px; font-weight:600; cursor:pointer; text-align:left; font-family:'Outfit',sans-serif; color:var(--text); transition:all 0.15s; }
+.quiz-option:active { transform:scale(0.98); }
+.quiz-option.correct { background:var(--success-dim); border-color:var(--success); color:var(--success); }
+.quiz-option.wrong { background:var(--danger-dim); border-color:var(--danger); color:var(--danger); }
+.quiz-option.disabled { pointer-events:none; opacity:0.5; }
+.quiz-option.correct.disabled { opacity:1; }
+
+/* MODE SELECT */
+.mode-select { display:flex; flex-direction:column; gap:12px; padding:8px 0; }
+.mode-btn { display:flex; align-items:center; gap:16px; padding:18px 20px; background:var(--surface); border:1.5px solid var(--border); border-radius:20px; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.18s; text-align:left; }
+.mode-btn:active { transform:scale(0.98); border-color:var(--accent); }
+.mode-icon { font-size:30px; flex-shrink:0; }
+.mode-title { font-size:16px; font-weight:700; color:var(--text); }
+.mode-desc { font-size:13px; color:var(--muted); margin-top:2px; }
+
 .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:rgba(15,15,19,.95); border-top:1px solid var(--border); display:flex; padding:10px 0; padding-bottom:max(10px,env(safe-area-inset-bottom)); z-index:600; backdrop-filter:blur(24px); }
 .nav-btn { flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 0; color:var(--muted); font-family:'Outfit',sans-serif; transition:color 0.2s; }
 .nav-btn.active { color:var(--accent); }
@@ -621,11 +642,32 @@ function sm2(w,q) {
 }
 
 function initCards() {
+    if (!words.length) { document.getElementById('cardsArea').innerHTML=`<div class="empty-state"><div class="empty-state-icon">🎉</div><p class="empty-state-text">Нет слов для повторения.<br>Добавь новые!</p></div>`; return; }
+    showModeSelect();
+}
+
+function showModeSelect() {
+    document.getElementById('cardsArea').innerHTML = `
+        <div style="font-size:18px;font-weight:800;margin-bottom:20px">Выбери режим</div>
+        <div class="mode-select">
+            <button class="mode-btn" onclick="startSession('classic')">
+                <span class="mode-icon">🎴</span>
+                <div><div class="mode-title">Карточки</div><div class="mode-desc">Знал / Не знал</div></div>
+            </button>
+            <button class="mode-btn" onclick="startSession('quiz')">
+                <span class="mode-icon">🧠</span>
+                <div><div class="mode-title">Quiz</div><div class="mode-desc">4 варианта ответа</div></div>
+            </button>
+        </div>`;
+}
+
+function startSession(mode) {
     const due=getDue(), pool=due.length?due:[...words];
-    if (!pool.length) { document.getElementById('cardsArea').innerHTML=`<div class="empty-state"><div class="empty-state-icon">🎉</div><p class="empty-state-text">Нет слов для повторения.<br>Добавь новые!</p></div>`; return; }
+    if (!pool.length) return;
     const cards=pool.sort((a,b)=>new Date(a.next_review)-new Date(b.next_review)).slice(0,Math.min(20,pool.length)).map(w=>({...w,rev:Math.random()>0.5}));
-    session={cards,idx:0,ok:0,bad:0,shown:false};
-    renderCard();
+    session={cards,idx:0,ok:0,bad:0,shown:false,mode};
+    if (mode==='quiz') renderQuiz();
+    else renderCard();
 }
 
 function renderCard() {
@@ -642,8 +684,8 @@ function renderCard() {
                 <div><div class="result-val green">${session.ok}</div><div class="result-label">Знал</div></div>
                 <div><div class="result-val red">${session.bad}</div><div class="result-label">Не знал</div></div>
             </div>
-            <button class="btn btn-primary" onclick="initCards()">🔄 Ещё раз</button>
-            <button class="btn btn-secondary" onclick="showScreen('words')">К словам</button>
+            <button class="btn btn-primary" onclick="startSession('${session.mode}')">🔄 Ещё раз</button>
+            <button class="btn btn-secondary" onclick="showModeSelect()">Другой режим</button>
         </div>`;
         saveSession(); return;
     }
@@ -729,6 +771,77 @@ function showScreen(name) {
     document.getElementById('fabBtn').style.display=name==='words'?'flex':'none';
     if(name==='cards') initCards();
     if(name==='stats') renderStats();
+}
+
+
+function renderQuiz() {
+    const area = document.getElementById('cardsArea');
+    if (session.idx >= session.cards.length) {
+        const rate = Math.round(session.ok / session.cards.length * 100);
+        const emoji = rate>=80?'🎉':rate>=50?'👍':'💪';
+        if (rate>=70) confetti();
+        area.innerHTML=`<div class="session-results">
+            <span class="result-icon ${rate>=70?'bounce':''}">${emoji}</span>
+            <div class="result-title">Quiz завершён!</div>
+            <div class="result-sub">Результат: ${rate}%</div>
+            <div class="result-stats">
+                <div><div class="result-val green">${session.ok}</div><div class="result-label">Верно</div></div>
+                <div><div class="result-val red">${session.bad}</div><div class="result-label">Неверно</div></div>
+            </div>
+            <button class="btn btn-primary" onclick="startSession('quiz')">🔄 Ещё раз</button>
+            <button class="btn btn-secondary" onclick="showModeSelect()">Другой режим</button>
+        </div>`;
+        saveSession();
+        return;
+    }
+
+    const c = session.cards[session.idx];
+    const pct = Math.round(session.idx / session.cards.length * 100);
+
+    // Generate 3 wrong answers from other words
+    const question = c.rev ? c.translation : c.word;
+    const correctAnswer = c.rev ? c.word : c.translation;
+    const answerField = c.rev ? 'word' : 'translation';
+
+    const others = words.filter(w => w.id !== c.id).sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
+    const options = [...others, correctAnswer].sort(() => Math.random()-0.5);
+
+    area.innerHTML = `
+        <div class="card-meta-row"><span>${session.idx+1} из ${session.cards.length}</span><span>✓${session.ok} ✗${session.bad}</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="quiz-card">
+            <div class="quiz-cat">${getCatLabel(c.category)} · ${c.rev?'RU→EN':'EN→RU'}</div>
+            <div class="quiz-question">${esc(question)}</div>
+        </div>
+        <div class="quiz-options">
+            ${options.map(opt => `<button class="quiz-option" onclick="answerQuiz(this,'${esc(opt).replace(/'/g,"\'")}','${esc(correctAnswer).replace(/'/g,"\'")}',${c.id})">${esc(opt)}</button>`).join('')}
+        </div>`;
+}
+
+async function answerQuiz(btn, chosen, correct, wordId) {
+    const isCorrect = chosen === correct;
+    if (isCorrect) session.ok++; else session.bad++;
+
+    // Show result
+    document.querySelectorAll('.quiz-option').forEach(b => {
+        b.classList.add('disabled');
+        if (b.textContent.trim() === correct) b.classList.add('correct');
+        else if (b === btn && !isCorrect) b.classList.add('wrong');
+    });
+
+    // Update SM-2
+    const card = session.cards[session.idx];
+    const upd = sm2(card, isCorrect?1:0);
+    const tc=(card.times_correct||0)+(isCorrect?1:0), tw=(card.times_wrong||0)+(!isCorrect?1:0);
+    await db.from('words').update({...upd,times_correct:tc,times_wrong:tw}).eq('id',card.id);
+    const i=words.findIndex(w=>w.id===card.id);
+    if(i>=0) words[i]={...words[i],...upd,times_correct:tc,times_wrong:tw};
+
+    setTimeout(() => {
+        session.idx++;
+        session.shown = false;
+        renderQuiz();
+    }, 1200);
 }
 
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('visible'); setTimeout(()=>t.classList.remove('visible'),2600); }
