@@ -745,7 +745,7 @@ body::before {
         <div id="goalBar"></div>
         <div class="search-wrap">
             <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" class="search-input" id="searchInput" placeholder="Поиск слов..." autocomplete="off" oninput="onSearch()">
+            <input type="text" class="search-input" id="searchInput" placeholder="Поиск слов..." autocomplete="off" oninput="onSearch()" inputmode="search" enterkeyhint="search">
         </div>
         <div id="wordsList" style="padding-bottom:80px"></div>
     </div>
@@ -1729,6 +1729,18 @@ function showToast(msg) {
 
 // ── START ─────────────────────────────────────────────────────────────────
 init().catch(console.error);
+
+// Dismiss keyboard on scroll or tap outside search
+document.addEventListener('touchstart', e => {
+    const si = document.getElementById('searchInput');
+    if (si && e.target !== si) si.blur();
+}, { passive: true });
+
+document.addEventListener('scroll', () => {
+    const si = document.getElementById('searchInput');
+    if (si) si.blur();
+}, { passive: true });
+
 
 </script>
 </body>
