@@ -478,7 +478,10 @@ function renderWords() {
                 </div>
                 <div class="word-item" id="wi-${w.id}">
                     <div class="word-item-body">
-                        <div class="word-item-en">${esc(w.word)}</div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="word-item-en">${esc(w.word)}</div>
+                            <button class="speak-btn" style="font-size:18px;padding:2px 4px" onclick="event.stopPropagation();speakText('${esc(w.word)}','en-US')">🔊</button>
+                        </div>
                         <div class="word-item-ru">${esc(w.translation)}</div>
                         <div class="word-item-footer">
                             <span class="status-badge badge-${st}">${STA[st]}</span>
@@ -649,7 +652,7 @@ function renderCard() {
         <div class="flashcard" onclick="reveal()">
             <div class="flashcard-cat">${getCatLabel(c.category)} · ${dir}</div>
             <div class="flashcard-word">${front}</div>
-            <button class="speak-btn" onclick="event.stopPropagation();speak(${JSON.stringify(c.rev?c.translation:c.word)},${c.rev?''ru'':''en''})">🔊</button>
+            <button class="speak-btn" onclick="event.stopPropagation();speakWord(this)" title="Произнести">🔊</button>
             ${session.shown?`<div class="flashcard-translation">${back}</div>`:`<div class="flashcard-hint">👆 Нажми, чтобы увидеть перевод</div>`}
         </div>
         ${session.shown?`<div class="card-actions"><button class="btn btn-wrong" onclick="answer(0)">✗ Не знал</button><button class="btn btn-correct" onclick="answer(1)">✓ Знал</button></div>`:''}`;
@@ -722,13 +725,21 @@ function todayStr() { return new Date().toISOString().split('T')[0]; }
 function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
 
-function speak(text, lang) {
-    if (!window.speechSynthesis) { return; }
+function speakText(text, lang) {
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = lang === 'en' ? 'en-US' : 'ru-RU';
+    utt.lang = lang || 'en-US';
     utt.rate = 0.85;
     window.speechSynthesis.speak(utt);
+}
+
+function speakWord(btn) {
+    if (!window.speechSynthesis || !session) return;
+    const c = session.cards[session.idx];
+    speakText(c.word, 'en-US');
+    btn.style.transform = 'scale(0.85)';
+    setTimeout(() => btn.style.transform = '', 200);
 }
 
 init().catch(console.error);
