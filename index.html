@@ -265,7 +265,7 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
         <div class="header-top">
             <div class="header-logo">WordPill 💊</div>
             <div class="streak-badge" id="streakBadge" onclick="openStreakModal()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--warning)" stroke="none"><path d="M12 2C8 8 4 12 4 16a8 8 0 0 0 16 0c0-4-4-8-8-14z"/></svg>
+                <span style="font-size:14px;line-height:1">🔥</span>
                 <span id="streakNum">0</span>
             </div>
         </div>
@@ -339,9 +339,7 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
     <div class="modal-overlay" id="streakModal" onclick="closeStreakModal()">
         <div class="modal-box" onclick="event.stopPropagation()">
             <div class="modal-handle"></div>
-            <div class="modal-streak-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="#fbbf24" stroke="none"><path d="M12 2C8 8 4 12 4 16a8 8 0 0 0 16 0c0-4-4-8-8-14z"/></svg>
-            </div>
+            <div style="font-size:52px;text-align:center;margin-bottom:4px;line-height:1">🔥</div>
             <div class="modal-streak-title" id="streakModalTitle">0 дней</div>
             <div class="modal-desc">Это твоя серия — сколько дней подряд ты открываешь WordPill.</div>
             <div class="modal-rules">
@@ -840,7 +838,7 @@ async function renderStats() {
             </div>
         </div>
         <div class="streak-card">
-            <div class="streak-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="none"><path d="M12 2C8 8 4 12 4 16a8 8 0 0 0 16 0c0-4-4-8-8-14z"/></svg></div>
+            <div style="font-size:32px;line-height:1">🔥</div>
             <div><div class="stat-val">${me.streak_days||0}</div><div class="stat-label">Дней подряд</div></div>
         </div>
         ${sess?.length?`<div class="section-title">Последние сессии</div>${sess.map(s=>{const r=s.cards_total?Math.round(s.cards_correct/s.cards_total*100):0;const d=new Date(s.started_at).toLocaleDateString('ru',{day:'numeric',month:'short'});return`<div class="session-item"><div><div class="session-date">${d}</div><div class="session-info">${s.cards_correct}/${s.cards_total} правильно</div></div><span class="status-badge ${r>=70?'badge-mastered':r>=50?'badge-learning':'badge-hard'}">${r}%</span></div>`;}).join('')}`:''}`;
