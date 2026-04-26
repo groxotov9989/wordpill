@@ -220,6 +220,126 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .rule-icon.purple { background:var(--accent-dim); }
 
 /* BOTTOM NAV */
+
+/* ===== TUTORIAL ===== */
+#tutorial {
+    position: fixed; inset: 0; z-index: 3000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: flex-end;
+    padding: 0 0 max(24px, env(safe-area-inset-bottom));
+}
+#tutorial.visible { display: flex; }
+
+.tut-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 28px 28px 28px 28px;
+    width: calc(100% - 32px);
+    max-width: 420px;
+    padding: 28px 24px 24px;
+    animation: slideInUp 0.35s ease;
+}
+.tut-dots {
+    display: flex; gap: 6px;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+.tut-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border); transition: all 0.3s;
+}
+.tut-dot.active { width: 20px; border-radius: 3px; background: var(--accent); }
+
+.tut-demo {
+    background: var(--surface2);
+    border-radius: 18px;
+    height: 180px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative;
+}
+
+/* Demo animations */
+.demo-word-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    width: 80%;
+    font-size: 15px; font-weight: 700;
+    position: relative;
+    transition: transform 0.4s ease;
+}
+.demo-word-sub { font-size: 13px; color: var(--muted); margin-top: 3px; font-weight: 400; }
+.demo-swipe-hint {
+    position: absolute; right: -80px; top: 0; bottom: 0;
+    width: 80px; background: var(--danger);
+    border-radius: 0 14px 14px 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px; font-weight: 700;
+    flex-direction: column; gap: 4px;
+}
+
+.demo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    width: 80%; text-align: center;
+}
+.demo-card-word { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.demo-card-sub { font-size: 13px; color: var(--muted); }
+
+.demo-quiz-opt {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 600;
+    margin: 4px 0; width: 80%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+}
+.demo-quiz-opt.correct { background: var(--success-dim); border-color: var(--success); color: var(--success); }
+
+.demo-streak {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.demo-streak-num { font-size: 48px; font-weight: 800; color: var(--accent); }
+.demo-streak-label { font-size: 13px; color: var(--muted); }
+.demo-days { display: flex; gap: 6px; margin-top: 4px; }
+.demo-day {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+}
+.demo-day.done { background: var(--accent-dim); border-color: var(--accent); }
+
+.tut-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+.tut-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+.tut-actions { display: flex; gap: 10px; }
+.tut-actions .btn { flex: 1; }
+.btn-skip { background: none; border: none; color: var(--muted); font-family: 'Outfit',sans-serif; font-size: 14px; cursor: pointer; padding: 16px; }
+
+@keyframes swipeLeft {
+    0%   { transform: translateX(0); }
+    40%  { transform: translateX(-60px); }
+    70%  { transform: translateX(-60px); }
+    100% { transform: translateX(0); }
+}
+@keyframes flashCorrect {
+    0%,100% { background: var(--surface2); border-color: var(--border); color: var(--text); }
+    50%,80% { background: var(--success-dim); border-color: var(--success); color: var(--success); }
+}
+@keyframes streakPulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+.anim-swipe { animation: swipeLeft 2s ease-in-out infinite; }
+.anim-correct { animation: flashCorrect 2s ease-in-out 0.5s infinite; }
+.anim-streak { animation: streakPulse 1.5s ease-in-out infinite; }
+
 .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:rgba(15,15,19,.95); border-top:1px solid var(--border); display:flex; padding:10px 0; padding-bottom:max(10px,env(safe-area-inset-bottom)); z-index:600; backdrop-filter:blur(24px); }
 .nav-btn { flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 0; color:var(--muted); font-family:'Outfit',sans-serif; transition:color 0.2s; }
 .nav-btn.active { color:var(--accent); }
@@ -361,6 +481,19 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
     </div>
 </div>
 
+<!-- TUTORIAL -->
+<div id="tutorial">
+    <div class="tut-card">
+        <div class="tut-dots" id="tutDots"></div>
+        <div class="tut-demo" id="tutDemo"></div>
+        <div class="tut-title" id="tutTitle"></div>
+        <div class="tut-desc" id="tutDesc"></div>
+        <div class="tut-actions">
+            <button class="btn-skip" onclick="closeTutorial()">Пропустить</button>
+            <button class="btn btn-primary" id="tutNext" onclick="tutNext()">Далее</button>
+        </div>
+    </div>
+
 <!-- FAB -->
 <button class="fab-btn" id="fabBtn" onclick="showScreen('add')">
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -430,6 +563,10 @@ function showApp() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('fabBtn').style.display = 'flex';
     updateHeader(); renderWords();
+    // Show tutorial if not seen
+    if (!localStorage.getItem('tut_done')) {
+        setTimeout(openTutorial, 600);
+    }
 }
 function finishOnboarding() { showApp(); }
 
@@ -868,6 +1005,114 @@ function showScreen(name) {
     document.getElementById('fabBtn').style.display=name==='words'?'flex':'none';
     if(name==='cards') initCards();
     if(name==='stats') renderStats();
+}
+
+
+// ── TUTORIAL ──────────────────────────────────────────────────────────────
+const TUT_STEPS = [
+    {
+        title: 'Добавляй слова',
+        desc: 'Нажми + чтобы добавить слово с урока. Автоперевод сам предложит значение.',
+        demo: () => `
+            <div style="width:80%;display:flex;flex-direction:column;gap:8px">
+                <div class="demo-word-item">
+                    <div>Auscultation</div>
+                    <div class="demo-word-sub">Аускультация</div>
+                </div>
+                <div class="demo-word-item">
+                    <div>Diagnosis</div>
+                    <div class="demo-word-sub">Диагноз</div>
+                </div>
+            </div>`
+    },
+    {
+        title: 'Свайп для действий',
+        desc: 'Потяни слово влево — появятся кнопки редактировать и удалить.',
+        demo: () => `
+            <div style="width:80%;overflow:hidden;border-radius:14px">
+                <div class="demo-word-item anim-swipe" style="border-radius:14px">
+                    <div>Stretcher</div>
+                    <div class="demo-word-sub">Носилки</div>
+                    <div class="demo-swipe-hint">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                        Удалить
+                    </div>
+                </div>
+            </div>`
+    },
+    {
+        title: 'Карточки',
+        desc: 'Повторяй слова карточками. Умный алгоритм показывает то, что пора повторить.',
+        demo: () => `
+            <div class="demo-card">
+                <div class="demo-card-word">Collarbone</div>
+                <div class="demo-card-sub">Нажми чтобы увидеть перевод</div>
+            </div>`
+    },
+    {
+        title: 'Quiz-режим',
+        desc: 'Проверяй себя — выбирай правильный перевод из 4 вариантов.',
+        demo: () => `
+            <div style="width:100%;padding:0 16px;display:flex;flex-direction:column;align-items:center;gap:4px">
+                <div style="font-size:18px;font-weight:800;margin-bottom:8px">Diagnosis</div>
+                <div class="demo-quiz-opt anim-correct">Диагноз</div>
+                <div class="demo-quiz-opt">Лечение</div>
+                <div class="demo-quiz-opt">Симптом</div>
+            </div>`
+    },
+    {
+        title: 'Следи за серией',
+        desc: 'Заходи каждый день — серия растёт. Пропустишь день — сгорит.',
+        demo: () => `
+            <div class="demo-streak">
+                <div class="demo-streak-num anim-streak">🔥 7</div>
+                <div class="demo-streak-label">дней подряд</div>
+                <div class="demo-days">
+                    ${['П','В','С','Ч','П','С','В'].map((d,i)=>`<div class="demo-day ${i<6?'done':''}">${d}</div>`).join('')}
+                </div>
+            </div>`
+    }
+];
+
+let tutStep = 0;
+
+function openTutorial() {
+    tutStep = 0;
+    renderTutStep();
+    document.getElementById('tutorial').classList.add('visible');
+}
+
+function closeTutorial() {
+    document.getElementById('tutorial').classList.remove('visible');
+    localStorage.setItem('tut_done', '1');
+}
+
+function tutNext() {
+    if (tutStep < TUT_STEPS.length - 1) {
+        tutStep++;
+        renderTutStep();
+    } else {
+        closeTutorial();
+    }
+}
+
+function renderTutStep() {
+    const step = TUT_STEPS[tutStep];
+    const isLast = tutStep === TUT_STEPS.length - 1;
+
+    // Dots
+    document.getElementById('tutDots').innerHTML = TUT_STEPS.map((_,i) =>
+        `<div class="tut-dot ${i===tutStep?'active':''}"></div>`).join('');
+
+    // Demo
+    document.getElementById('tutDemo').innerHTML = step.demo();
+
+    // Text
+    document.getElementById('tutTitle').textContent = step.title;
+    document.getElementById('tutDesc').textContent = step.desc;
+
+    // Button
+    document.getElementById('tutNext').textContent = isLast ? 'Начать!' : 'Далее';
 }
 
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('visible'); setTimeout(()=>t.classList.remove('visible'),2600); }
