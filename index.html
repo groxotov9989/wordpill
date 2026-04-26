@@ -121,8 +121,8 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .flashcard-cat { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--accent); }
 .flashcard-word { font-size:34px; font-weight:800; letter-spacing:-0.5px; }
 .flashcard-translation { font-size:24px; font-weight:700; color:var(--accent); animation:fadeInUp 0.25s ease; }
-.speak-btn { background:none; border:none; cursor:pointer; font-size:28px; padding:4px 8px; transition:transform 0.15s; display:inline-block; }
-.speak-btn:active { transform:scale(0.88); }
+.speak-btn { background:none; border:none; cursor:pointer; padding:2px 4px; transition:opacity 0.15s; display:inline-flex; align-items:center; opacity:0.4; flex-shrink:0; }
+.speak-btn:active { opacity:1; }
 .flashcard-hint { font-size:14px; color:var(--muted); font-weight:500; }
 .card-actions { display:flex; gap:12px; margin-top:16px; }
 .card-actions .btn { flex:1; }
@@ -480,7 +480,13 @@ function renderWords() {
                     <div class="word-item-body">
                         <div style="display:flex;align-items:center;gap:8px">
                             <div class="word-item-en">${esc(w.word)}</div>
-                            <button class="speak-btn" style="font-size:18px;padding:2px 4px" onclick="event.stopPropagation();speakText('${esc(w.word)}','en-US')">🔊</button>
+                            <button class="speak-btn" onclick="event.stopPropagation();speakText(this.dataset.word)" data-word="${esc(w.word)}" aria-label="Произнести">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                                </svg>
+                            </button>
                         </div>
                         <div class="word-item-ru">${esc(w.translation)}</div>
                         <div class="word-item-footer">
@@ -652,7 +658,13 @@ function renderCard() {
         <div class="flashcard" onclick="reveal()">
             <div class="flashcard-cat">${getCatLabel(c.category)} · ${dir}</div>
             <div class="flashcard-word">${front}</div>
-            <button class="speak-btn" onclick="event.stopPropagation();speakWord(this)" title="Произнести">🔊</button>
+            <button class="speak-btn" onclick="event.stopPropagation();speakWord(this)" title="Произнести">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+            </button>
             ${session.shown?`<div class="flashcard-translation">${back}</div>`:`<div class="flashcard-hint">👆 Нажми, чтобы увидеть перевод</div>`}
         </div>
         ${session.shown?`<div class="card-actions"><button class="btn btn-wrong" onclick="answer(0)">✗ Не знал</button><button class="btn btn-correct" onclick="answer(1)">✓ Знал</button></div>`:''}`;
@@ -725,11 +737,11 @@ function todayStr() { return new Date().toISOString().split('T')[0]; }
 function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
 
-function speakText(text, lang) {
+function speakText(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = lang || 'en-US';
+    utt.lang = 'en-US';
     utt.rate = 0.85;
     window.speechSynthesis.speak(utt);
 }
