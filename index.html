@@ -121,6 +121,8 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .flashcard-cat { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--accent); }
 .flashcard-word { font-size:34px; font-weight:800; letter-spacing:-0.5px; }
 .flashcard-translation { font-size:24px; font-weight:700; color:var(--accent); animation:fadeInUp 0.25s ease; }
+.speak-btn { background:none; border:none; cursor:pointer; font-size:28px; padding:4px 8px; transition:transform 0.15s; display:inline-block; }
+.speak-btn:active { transform:scale(0.88); }
 .flashcard-hint { font-size:14px; color:var(--muted); font-weight:500; }
 .card-actions { display:flex; gap:12px; margin-top:16px; }
 .card-actions .btn { flex:1; }
@@ -647,6 +649,7 @@ function renderCard() {
         <div class="flashcard" onclick="reveal()">
             <div class="flashcard-cat">${getCatLabel(c.category)} · ${dir}</div>
             <div class="flashcard-word">${front}</div>
+            <button class="speak-btn" onclick="event.stopPropagation();speak(${JSON.stringify(c.rev?c.translation:c.word)},${c.rev?''ru'':''en''})">🔊</button>
             ${session.shown?`<div class="flashcard-translation">${back}</div>`:`<div class="flashcard-hint">👆 Нажми, чтобы увидеть перевод</div>`}
         </div>
         ${session.shown?`<div class="card-actions"><button class="btn btn-wrong" onclick="answer(0)">✗ Не знал</button><button class="btn btn-correct" onclick="answer(1)">✓ Знал</button></div>`:''}`;
@@ -717,6 +720,16 @@ function showToast(msg) { const t=document.getElementById('toast'); t.textConten
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+
+function speak(text, lang) {
+    if (!window.speechSynthesis) { return; }
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = lang === 'en' ? 'en-US' : 'ru-RU';
+    utt.rate = 0.85;
+    window.speechSynthesis.speak(utt);
+}
 
 init().catch(console.error);
 </script>
