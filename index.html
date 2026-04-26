@@ -340,6 +340,53 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 .anim-correct { animation: flashCorrect 2s ease-in-out 0.5s infinite; }
 .anim-streak { animation: streakPulse 1.5s ease-in-out infinite; }
 
+
+/* ===== LIBRARY ===== */
+.pack-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+.pack-card:active { transform: scale(0.98); border-color: var(--accent); }
+.pack-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.pack-card-title { font-size: 16px; font-weight: 700; }
+.pack-card-count { font-size: 12px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 10px; }
+.pack-card-desc { font-size: 13px; color: var(--muted); }
+
+.pack-words-screen { padding: 16px; }
+.pack-words-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.pack-back-btn { background: none; border: none; cursor: pointer; color: var(--accent); padding: 4px; display: flex; }
+.pack-words-title { font-size: 18px; font-weight: 800; flex: 1; }
+.pack-word-item {
+    display: flex; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 14px 16px; margin-bottom: 8px;
+}
+.pack-word-body { flex: 1; min-width: 0; }
+.pack-word-en { font-size: 15px; font-weight: 700; }
+.pack-word-ru { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.pack-add-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--accent); padding: 4px;
+    transition: transform 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.pack-add-btn:active { transform: scale(0.85); }
+.pack-add-btn.added { color: var(--success); }
+.pack-add-all-btn {
+    width: 100%; padding: 14px;
+    background: var(--accent-dim); color: var(--accent);
+    border: 1.5px solid var(--accent); border-radius: 16px;
+    font-size: 15px; font-weight: 700; font-family: 'Outfit',sans-serif;
+    cursor: pointer; margin-bottom: 16px; transition: all 0.18s;
+}
+.pack-add-all-btn:active { transform: scale(0.98); }
+
 .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:rgba(15,15,19,.95); border-top:1px solid var(--border); display:flex; padding:10px 0; padding-bottom:max(10px,env(safe-area-inset-bottom)); z-index:600; backdrop-filter:blur(24px); }
 .nav-btn { flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 0; color:var(--muted); font-family:'Outfit',sans-serif; transition:color 0.2s; }
 .nav-btn.active { color:var(--accent); }
@@ -420,6 +467,10 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
         <button class="btn btn-secondary" id="cancelBtn" style="display:none" onclick="cancelEdit()">Отмена</button>
     </div>
 
+
+    <div id="screen-library" class="screen">
+        <div id="libraryContent"></div>
+    </div>
     <div id="screen-cards" class="screen"><div id="cardsArea"></div></div>
     <div id="screen-stats" class="screen"><div id="statsArea"></div></div>
 
@@ -1005,6 +1056,7 @@ function showScreen(name) {
     document.getElementById('fabBtn').style.display=name==='words'?'flex':'none';
     if(name==='cards') initCards();
     if(name==='stats') renderStats();
+    if(name==='library') renderLibrary();
 }
 
 
@@ -1113,6 +1165,113 @@ function renderTutStep() {
 
     // Button
     document.getElementById('tutNext').textContent = isLast ? 'Начать!' : 'Далее';
+}
+
+
+// ── LIBRARY ───────────────────────────────────────────────────────────────
+let packs = [];
+let currentPack = null;
+let addedWords = new Set();
+
+async function loadPacks() {
+    const { data } = await db.from('packs').select('*, pack_words(count)').order('id');
+    packs = data || [];
+}
+
+async function renderLibrary() {
+    const el = document.getElementById('libraryContent');
+    if (!packs.length) await loadPacks();
+
+    el.innerHTML = `
+        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Библиотека</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Готовые наборы слов — добавляй себе</div>
+        ${packs.map(p => `
+            <div class="pack-card" onclick="openPack(${p.id})">
+                <div class="pack-card-header">
+                    <div class="pack-card-title">${esc(p.title)}</div>
+                    <div class="pack-card-count">${p.pack_words[0]?.count || 0} слов</div>
+                </div>
+                <div class="pack-card-desc">${esc(p.description || '')}</div>
+            </div>`).join('')}`;
+}
+
+async function openPack(packId) {
+    const { data: packWords } = await db.from('pack_words').select('*').eq('pack_id', packId).order('id');
+    const pack = packs.find(p => p.id === packId);
+    currentPack = pack;
+
+    // Check which words already added
+    addedWords = new Set(words.map(w => w.word.toLowerCase()));
+
+    const el = document.getElementById('libraryContent');
+    el.innerHTML = `
+        <div class="pack-words-header">
+            <button class="pack-back-btn" onclick="renderLibrary()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="pack-words-title">${esc(pack.title)}</div>
+        </div>
+        <button class="pack-add-all-btn" onclick="addAllFromPack(${packId})">
+            Добавить все слова
+        </button>
+        <div id="packWordsList">
+            ${packWords.map(w => renderPackWord(w)).join('')}
+        </div>`;
+}
+
+function renderPackWord(w) {
+    const already = addedWords.has(w.word.toLowerCase());
+    return `<div class="pack-word-item" id="pw-${w.id}">
+        <div class="pack-word-body">
+            <div class="pack-word-en">${esc(w.word)}</div>
+            <div class="pack-word-ru">${esc(w.translation)}</div>
+        </div>
+        <button class="pack-add-btn ${already?'added':''}" onclick="addFromPack(${w.id},'${esc(w.word).replace(/'/g,"\'")}','${esc(w.translation).replace(/'/g,"\'")}','${w.category}')" ${already?'disabled':''}>
+            ${already
+                ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
+                : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`
+            }
+        </button>
+    </div>`;
+}
+
+async function addFromPack(pwId, word, translation, category) {
+    if (addedWords.has(word.toLowerCase())) return;
+    const { data, error } = await db.from('words').insert({
+        user_id: me.id, word, translation, category,
+        next_review: new Date().toISOString()
+    }).select().single();
+    if (error) { showToast('Ошибка добавления'); return; }
+    words.unshift(data);
+    addedWords.add(word.toLowerCase());
+    // Update button
+    const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
+    if (btn) {
+        btn.classList.add('added');
+        btn.disabled = true;
+        btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    }
+    updateHeader();
+    showToast(`✓ ${word} добавлено`);
+}
+
+async function addAllFromPack(packId) {
+    const { data: packWords } = await db.from('pack_words').select('*').eq('pack_id', packId);
+    const toAdd = packWords.filter(w => !addedWords.has(w.word.toLowerCase()));
+    if (!toAdd.length) { showToast('Все слова уже добавлены'); return; }
+
+    const rows = toAdd.map(w => ({
+        user_id: me.id, word: w.word, translation: w.translation,
+        category: w.category, next_review: new Date().toISOString()
+    }));
+    const { data, error } = await db.from('words').insert(rows).select();
+    if (error) { showToast('Ошибка добавления'); return; }
+    words = [...data, ...words];
+    toAdd.forEach(w => addedWords.add(w.word.toLowerCase()));
+    updateHeader();
+    // Refresh pack view
+    openPack(packId);
+    showToast(`Добавлено ${data.length} слов!`);
 }
 
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('visible'); setTimeout(()=>t.classList.remove('visible'),2600); }
