@@ -492,7 +492,7 @@ function renderWords() {
                         <div class="word-item-footer">
                             <span class="status-badge badge-${st}">${STA[st]}</span>
                             ${due&&tot?'<span class="due-dot"></span>':''}
-                            ${tot?`<span class="word-meta">✓${w.times_correct||0}·✗${w.times_wrong||0}·${w.interval_days||1}д</span>`:''}
+                            ${tot?`<span class="word-meta">✓${w.times_correct||0} &nbsp;✗${w.times_wrong||0}</span>`:''}
                         </div>
                     </div>
                 </div>
