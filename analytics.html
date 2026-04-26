@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordPill — Аналитика</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --accent: #a855f7; --accent2: #7c3aed;
+    --accent-dim: rgba(168,85,247,0.15);
+    --bg: #0f0f13; --surface: #1a1a22; --surface2: #22222e;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0f0f5; --muted: #787890;
+    --success: #34d399; --success-dim: rgba(52,211,153,0.15);
+    --danger: #f87171; --danger-dim: rgba(248,113,113,0.15);
+    --warning: #fbbf24;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:24px 20px 40px; }
+body::before { content:''; position:fixed; top:0; left:50%; transform:translateX(-50%); width:700px; height:300px; background:radial-gradient(ellipse at top,rgba(168,85,247,0.1),transparent 70%); pointer-events:none; }
+
+.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+.logo { font-size:22px; font-weight:800; background:linear-gradient(135deg,#fff,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.last-update { font-size:12px; color:var(--muted); }
+
+.summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+@media(max-width:600px) { .summary-grid { grid-template-columns:repeat(2,1fr); } }
+.summary-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:18px; text-align:center; }
+.summary-val { font-size:30px; font-weight:800; line-height:1; margin-bottom:4px; }
+.summary-label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+
+.section { margin-bottom:28px; }
+.section-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:14px; }
+
+/* USERS TABLE */
+.users-table { width:100%; border-collapse:collapse; }
+.users-table th { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; text-align:left; padding:0 16px 12px; }
+.user-row { background:var(--surface); border:1px solid var(--border); border-radius:16px; margin-bottom:8px; display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr; align-items:center; padding:14px 16px; gap:8px; transition:border-color .2s; }
+.user-row:hover { border-color:rgba(168,85,247,.3); }
+.user-name { font-weight:700; font-size:15px; }
+.user-handle { font-size:12px; color:var(--muted); margin-top:2px; }
+.user-stat { font-size:14px; font-weight:600; }
+.user-stat.green { color:var(--success); }
+.user-stat.red { color:var(--danger); }
+.user-stat.purple { color:var(--accent); }
+.user-stat.muted { color:var(--muted); }
+.streak-pill { display:inline-flex; align-items:center; gap:4px; background:rgba(251,191,36,.15); color:var(--warning); border-radius:10px; padding:2px 8px; font-size:12px; font-weight:700; }
+.active-dot { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:4px; }
+.dot-today { background:var(--success); box-shadow:0 0 6px rgba(52,211,153,.6); }
+.dot-old { background:var(--muted); }
+.badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; text-transform:uppercase; }
+.badge-active { background:var(--success-dim); color:var(--success); }
+.badge-inactive { background:var(--surface2); color:var(--muted); }
+
+/* SESSIONS */
+.sessions-list { display:flex; flex-direction:column; gap:8px; }
+.session-row { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
+.session-meta { font-size:13px; color:var(--muted); margin-top:2px; }
+.session-rate { font-size:15px; font-weight:700; }
+
+.loading { text-align:center; padding:60px; color:var(--muted); font-size:16px; }
+.refresh-btn { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); border-radius:12px; padding:8px 18px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all .2s; }
+.refresh-btn:active { transform:scale(.96); }
+
+@media(max-width:700px) {
+    .user-row { grid-template-columns:1fr 1fr; }
+    .user-col-hide { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">WordPill 💊 — Аналитика</div>
+    <button class="refresh-btn" onclick="loadData()">Обновить</button>
+</div>
+
+<div id="content"><div class="loading">Загружаем данные...</div></div>
+
+<script>
+const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const SKIP_IDS = [999999999]; // dev user
+
+async function loadData() {
+    document.getElementById('content').innerHTML = '<div class="loading">Загружаем данные...</div>';
+
+    // Users with word stats
+    const { data: users } = await db.from('users').select('*').not('id', 'in', `(${SKIP_IDS.join(',')})`).order('last_seen', { ascending: false });
+
+    // Words per user
+    const { data: wordStats } = await db.from('words').select('user_id, times_correct, times_wrong, interval_days');
+
+    // Recent sessions
+    const { data: sessions } = await db.from('study_sessions').select('*, users(first_name, username)').not('user_id', 'in', `(${SKIP_IDS.join(',')})`).order('started_at', { ascending: false }).limit(10);
+
+    // Calc per user
+    const today = new Date().toISOString().split('T')[0];
+    const userMap = {};
+    (wordStats || []).forEach(w => {
+        if (SKIP_IDS.includes(w.user_id)) return;
+        if (!userMap[w.user_id]) userMap[w.user_id] = { words: 0, correct: 0, wrong: 0, mastered: 0 };
+        userMap[w.user_id].words++;
+        userMap[w.user_id].correct += w.times_correct || 0;
+        userMap[w.user_id].wrong += w.times_wrong || 0;
+        const total = (w.times_correct || 0) + (w.times_wrong || 0);
+        const rate = total > 0 ? w.times_correct / total : 0;
+        if (w.interval_days >= 7 && rate >= 0.8) userMap[w.user_id].mastered++;
+    });
+
+    const totalUsers = (users || []).length;
+    const activeToday = (users || []).filter(u => u.last_study_date === today).length;
+    const totalWords = Object.values(userMap).reduce((a, u) => a + u.words, 0);
+    const totalSessions = (sessions || []).length;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('content').innerHTML = `
+        <!-- Summary -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-val" style="color:var(--accent)">${totalUsers}</div>
+                <div class="summary-label">Учеников</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-val" style="color:var(--success)">${activeToday}</div>
+                <div class="summary-label">Активны сегодня</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-val">${totalWords}</div>
+                <div class="summary-label">Слов добавлено</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-val" style="color:var(--warning)">${totalSessions}</div>
+                <div class="summary-label">Сессий всего</div>
+            </div>
+        </div>
+
+        <!-- Users -->
+        <div class="section">
+            <div class="section-title">Ученики</div>
+            ${(users || []).map(u => {
+                const s = userMap[u.id] || { words: 0, correct: 0, wrong: 0, mastered: 0 };
+                const isToday = u.last_study_date === today;
+                const acc = s.correct + s.wrong > 0 ? Math.round(s.correct / (s.correct + s.wrong) * 100) : 0;
+                const lastSeen = new Date(u.last_seen).toLocaleDateString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                return `<div class="user-row">
+                    <div>
+                        <div class="user-name">
+                            <span class="active-dot ${isToday ? 'dot-today' : 'dot-old'}"></span>
+                            ${esc(u.first_name)}
+                        </div>
+                        <div class="user-handle">@${esc(u.username || '—')} · ${lastSeen}</div>
+                    </div>
+                    <div class="user-stat purple">${s.words} слов</div>
+                    <div class="user-stat green">${s.mastered} выучено</div>
+                    <div class="user-stat">${acc > 0 ? acc + '%' : '—'}</div>
+                    <div class="streak-pill">🔥 ${u.streak_days || 0}</div>
+                    <div><span class="badge ${isToday ? 'badge-active' : 'badge-inactive'}">${isToday ? 'Сегодня' : 'Не заходил'}</span></div>
+                </div>`;
+            }).join('')}
+        </div>
+
+        <!-- Recent sessions -->
+        <div class="section">
+            <div class="section-title">Последние сессии</div>
+            <div class="sessions-list">
+                ${(sessions || []).map(s => {
+                    const rate = s.cards_total > 0 ? Math.round(s.cards_correct / s.cards_total * 100) : 0;
+                    const date = new Date(s.started_at).toLocaleDateString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    const color = rate >= 70 ? 'var(--success)' : rate >= 50 ? 'var(--warning)' : 'var(--danger)';
+                    return `<div class="session-row">
+                        <div>
+                            <div style="font-weight:700">${esc(s.users?.first_name || '—')}</div>
+                            <div class="session-meta">${date} · ${s.cards_correct}/${s.cards_total} карточек</div>
+                        </div>
+                        <div class="session-rate" style="color:${color}">${rate}%</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+
+        <div style="text-align:center;font-size:12px;color:var(--muted)">Обновлено в ${timeStr}</div>
+    `;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadData();
+</script>
+</body>
+</html>
