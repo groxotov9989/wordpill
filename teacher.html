@@ -882,15 +882,21 @@ let searchTimer = null;
 
 async function openAddStudent() {
   document.getElementById('studentSearchInput').value = '';
-  document.getElementById('studentSearchResults').innerHTML = '';
-
-  // Load all users not yet in this group
-  if (!allUsers.length) {
-    const { data } = await sb.from('users').select('*').order('first_name');
-    allUsers = data || [];
-  }
-  renderSearchResults(allUsers);
+  document.getElementById('studentSearchResults').innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">Загрузка...</div>`;
   openModal('modalAddStudent');
+
+  // Загрузить всех пользователей которые ещё не привязаны ни к какому преподу
+  const { data: allLinked } = await sb.from('teacher_students').select('user_id');
+  const linkedIds = new Set((allLinked || []).map(l => l.user_id));
+
+  // Ученики уже в моей группе — тоже показываем (чтобы видеть галочку)
+  const myIds = new Set(students.map(s => s.id));
+
+  const { data } = await sb.from('users').select('*').order('first_name');
+  // Показываем: своих учеников (с галочкой) + свободных (без привязки)
+  allUsers = (data || []).filter(u => myIds.has(u.id) || !linkedIds.has(u.id));
+
+  renderSearchResults(allUsers);
 }
 
 function searchStudents() {
