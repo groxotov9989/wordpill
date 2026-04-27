@@ -1539,38 +1539,17 @@ function renderPackWord(w) {
 
 async function addFromPack(pwId, word, translation, category) {
     if (addedWords.has(word.toLowerCase())) return;
-
-    // Optimistic UI — обновляем сразу, не ждём Supabase
-    addedWords.add(word.toLowerCase());
-    const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
-    if (btn) { btn.classList.add('added'); btn.disabled = true; btn.innerHTML = ICON.check; }
-    showToast(`✓ ${word} добавлено`);
-
-    const tempWord = {
-        id: `temp-${Date.now()}`, user_id: me.id, word, translation, category,
-        next_review: new Date().toISOString(), times_correct: 0, times_wrong: 0
-    };
-    words.unshift(tempWord);
-    updateHeader();
-
-    // Фоновый запрос
     const { data, error } = await db.from('words').insert({
         user_id: me.id, word, translation, category, next_review: new Date().toISOString()
     }).select().single();
-
-    if (error) {
-        // Откатываем если ошибка
-        words = words.filter(w => w.id !== tempWord.id);
-        addedWords.delete(word.toLowerCase());
-        if (btn) { btn.classList.remove('added'); btn.disabled = false; btn.innerHTML = ICON.plus; }
-        updateHeader();
-        showToast('Ошибка добавления');
-        return;
-    }
-
-    // Заменяем временный объект реальным
-    const idx = words.findIndex(w => w.id === tempWord.id);
-    if (idx >= 0) words[idx] = data;
+    if (error) { showToast('Ошибка добавления'); return; }
+    words.unshift(data);
+    addedWords.add(word.toLowerCase());
+    const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
+    if (btn) { btn.classList.add('added'); btn.disabled = true; btn.innerHTML = ICON.check; }
+    updateHeader();
+    renderWords();
+    showToast(`✓ ${word} добавлено`);
 }
 
 async function addAllFromPack(packId) {
