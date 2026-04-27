@@ -686,7 +686,7 @@ function renderStudents() {
   const list = document.getElementById('studentsList');
 
   if (!students.length) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div>Нет учеников. Попроси администратора добавить учеников в твою группу.</div>`;
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div>Нет учеников. Нажми «+ Добавить ученика» чтобы добавить первого в свою группу.</div>`;
     return;
   }
 
