@@ -1486,10 +1486,57 @@ async function saveSession() {
 // ── LIBRARY (PACKS) ───────────────────────────────────────────────────────
 async function renderLibrary() {
     const el = document.getElementById('libraryContent');
+    el.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:20px">Загрузка...</div>`;
+
+    // 1. Глобальные паки (teacher_id = null) — видны всем
+    const { data: globalPacks } = await db
+        .from('packs')
+        .select('*, pack_words(count)')
+        .is('teacher_id', null)
+        .order('id');
+
+    // 2. Найти группы (teacher_id) в которых состоит ученик
+    const { data: myGroups } = await db
+        .from('teacher_students')
+        .select('teacher_id')
+        .eq('user_id', me.id);
+    const myTeacherIds = (myGroups || []).map(g => g.teacher_id);
+
+    // 3. Паки назначенные школе, группе этого ученика, или лично ему
+    let assignedPackIds = new Set();
+
+    if (myTeacherIds.length > 0) {
+        const { data: assignments } = await db
+            .from('pack_assignments')
+            .select('pack_id, scope, user_id, teacher_id')
+            .or(`scope.eq.school,and(scope.eq.group,teacher_id.in.(${myTeacherIds.join(',')})),and(scope.eq.user,user_id.eq.${me.id})`);
+        (assignments || []).forEach(a => assignedPackIds.add(a.pack_id));
+    } else {
+        // Только school-scope если ученик не в группе
+        const { data: assignments } = await db
+            .from('pack_assignments')
+            .select('pack_id')
+            .eq('scope', 'school');
+        (assignments || []).forEach(a => assignedPackIds.add(a.pack_id));
+    }
+
+    // 4. Загрузить назначенные паки
+    let assignedPacks = [];
+    if (assignedPackIds.size > 0) {
+        const { data } = await db
+            .from('packs')
+            .select('*, pack_words(count)')
+            .in('id', [...assignedPackIds])
+            .not('teacher_id', 'is', null);
+        assignedPacks = data || [];
+    }
+
+    packs = [...(globalPacks || []), ...assignedPacks];
 
     if (!packs.length) {
-        const { data } = await db.from('packs').select('*, pack_words(count)').order('id');
-        packs = data || [];
+        el.innerHTML = `<div style="font-size:18px;font-weight:800;margin-bottom:4px">Библиотека</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:40px;text-align:center">Преподаватель пока не назначил паки слов</div>`;
+        return;
     }
 
     el.innerHTML = `
