@@ -419,6 +419,7 @@ option { background: var(--bg3); }
           👥 Ученики
           <span class="section-label-tag" id="studentsCount">0</span>
         </div>
+        <button class="btn btn-primary" onclick="openAddStudent()">+ Добавить ученика</button>
       </div>
 
       <div class="students-card">
@@ -428,7 +429,7 @@ option { background: var(--bg3); }
           <div>Прогресс</div>
           <div>Серия</div>
           <div style="text-align:right">Слов</div>
-          <div style="text-align:right">Пак</div>
+          <div style="text-align:right"></div>
         </div>
         <div id="studentsList"></div>
       </div>
@@ -561,6 +562,23 @@ option { background: var(--bg3); }
   </div>
 </div>
 
+<!-- Modal: Add Student -->
+<div class="modal-overlay" id="modalAddStudent">
+  <div class="modal" style="position:relative">
+    <div class="modal-close" onclick="closeModal('modalAddStudent')">✕</div>
+    <div class="modal-title">Добавить ученика</div>
+    <div class="modal-sub">Найди ученика по имени или юзернейму Telegram.</div>
+
+    <div class="form-group">
+      <label class="form-label">Поиск</label>
+      <input type="text" class="form-input" id="studentSearchInput"
+        placeholder="Имя или @username" oninput="searchStudents()">
+    </div>
+
+    <div id="studentSearchResults" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <span class="toast-icon" id="toastIcon">✓</span>
@@ -683,7 +701,7 @@ function renderStudents() {
     const streakText = s.streak_days > 0 ? `🔥 ${s.streak_days} дн.` : '— 0 дн.';
 
     return `
-      <div class="student-row">
+      <div class="student-row" id="sr-${s.id}">
         <div class="avatar ${color}">${initials}</div>
         <div>
           <div class="student-name"><span class="status-dot ${statusClass}"></span>${s.first_name || ''} ${s.last_name || ''}</div>
@@ -695,8 +713,9 @@ function renderStudents() {
         </div>
         <div class="${streakClass} streak-cell">${streakText}</div>
         <div class="words-cell">${s.wordCount}<div class="words-sub">слов</div></div>
-        <div class="assign-btn-cell">
-          <button class="btn btn-ghost btn-sm" onclick="openAssignToUser(${s.id}, '${(s.first_name || '') + ' ' + (s.last_name || '')}')">Пак →</button>
+        <div class="assign-btn-cell" style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="openAssignToUser(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">Пак →</button>
+          <button class="btn btn-danger-ghost btn-sm" onclick="removeStudent(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">✕</button>
         </div>
       </div>
     `;
@@ -856,6 +875,98 @@ function toast(icon, msg) {
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
+
+// ─── STUDENT MANAGEMENT ───
+let allUsers = [];
+let searchTimer = null;
+
+async function openAddStudent() {
+  document.getElementById('studentSearchInput').value = '';
+  document.getElementById('studentSearchResults').innerHTML = '';
+
+  // Load all users not yet in this group
+  if (!allUsers.length) {
+    const { data } = await sb.from('users').select('*').order('first_name');
+    allUsers = data || [];
+  }
+  renderSearchResults(allUsers);
+  openModal('modalAddStudent');
+}
+
+function searchStudents() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const q = document.getElementById('studentSearchInput').value.trim().toLowerCase();
+    const filtered = q
+      ? allUsers.filter(u =>
+          (u.first_name || '').toLowerCase().includes(q) ||
+          (u.last_name  || '').toLowerCase().includes(q) ||
+          (u.username   || '').toLowerCase().includes(q))
+      : allUsers;
+    renderSearchResults(filtered);
+  }, 200);
+}
+
+function renderSearchResults(users) {
+  const myIds = new Set(students.map(s => s.id));
+  const el = document.getElementById('studentSearchResults');
+
+  if (!users.length) {
+    el.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">Никого не нашли</div>`;
+    return;
+  }
+
+  el.innerHTML = users.map(u => {
+    const inGroup = myIds.has(u.id);
+    const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || '—';
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:12px 16px;">
+        <div>
+          <div style="font-size:14px;font-weight:600">${name}</div>
+          <div style="font-size:11px;color:var(--muted)">@${u.username || '—'}</div>
+        </div>
+        ${inGroup
+          ? `<span style="font-size:11px;color:var(--success);font-weight:700">✓ В группе</span>`
+          : `<button class="btn btn-primary btn-sm" onclick="addStudentToGroup(${u.id})">Добавить</button>`}
+      </div>`;
+  }).join('');
+}
+
+async function addStudentToGroup(userId) {
+  const { error } = await sb.from('teacher_students').insert({
+    teacher_id: teacher.id, user_id: userId
+  });
+  if (error && !error.message.includes('duplicate')) {
+    toast('❌', 'Ошибка добавления'); return;
+  }
+  // Refresh
+  await loadStudents();
+  renderStudents();
+  renderStats();
+  // Update search UI
+  renderSearchResults(allUsers.filter(u => {
+    const q = document.getElementById('studentSearchInput').value.trim().toLowerCase();
+    return !q || (u.first_name||'').toLowerCase().includes(q) ||
+      (u.last_name||'').toLowerCase().includes(q) ||
+      (u.username||'').toLowerCase().includes(q);
+  }));
+  const user = allUsers.find(u => u.id === userId);
+  const name = user ? `${user.first_name||''} ${user.last_name||''}`.trim() : 'Ученик';
+  toast('✅', `${name} добавлен в группу`);
+}
+
+async function removeStudent(userId, name) {
+  if (!confirm(`Убрать ${name} из твоей группы?`)) return;
+  const { error } = await sb.from('teacher_students')
+    .delete().eq('teacher_id', teacher.id).eq('user_id', userId);
+  if (error) { toast('❌', 'Ошибка удаления'); return; }
+  students = students.filter(s => s.id !== userId);
+  allUsers = []; // сбросить кеш чтобы при следующем открытии перезагрузился
+  renderStudents();
+  renderStats();
+  toast('🗑️', `${name} убран из группы`);
+}
 
 // ─── EDIT PACK ───
 let editPackId = null;
