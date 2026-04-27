@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordPill — Дашборд преподавателя</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --p: #a855f7;
+  --p2: #7c3aed;
+  --bg: #09090f;
+  --bg2: #111118;
+  --bg3: #18181f;
+  --bg4: #1f1f28;
+  --border: rgba(168,85,247,.15);
+  --border2: rgba(255,255,255,.06);
+  --text: #f0f0f8;
+  --muted: #6b6b80;
+  --muted2: #9090a8;
+  --success: #34d399;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --glow: rgba(168,85,247,.35);
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* GRAIN */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: .3;
+}
+
+/* GLOW BG */
+.bg-glow {
+  position: fixed; top: -300px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 600px;
+  background: radial-gradient(ellipse, rgba(168,85,247,.12) 0%, transparent 65%);
+  pointer-events: none; z-index: 0;
+}
+
+/* LAYOUT */
+.app { position: relative; z-index: 1; min-height: 100vh; }
+
+/* NAV */
+nav {
+  padding: 0 40px;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(9,9,15,.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border2);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-logo {
+  font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+  background: linear-gradient(135deg, #fff 30%, var(--p));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-right { display: flex; align-items: center; gap: 16px; }
+.nav-teacher-name {
+  font-size: 13px; font-weight: 600; color: var(--muted2);
+}
+.nav-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(168,85,247,.1); border: 1px solid var(--border);
+  border-radius: 100px; padding: 4px 12px;
+  font-size: 11px; font-weight: 700; color: var(--p);
+}
+
+/* MAIN */
+main { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
+
+/* LOADING / ERROR */
+.state-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 60vh; gap: 16px; text-align: center;
+}
+.state-icon { font-size: 48px; }
+.state-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+.state-sub { font-size: 14px; color: var(--muted2); max-width: 320px; line-height: 1.6; }
+.spinner {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid var(--border2);
+  border-top-color: var(--p);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOP STATS */
+.stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 16px; margin-bottom: 36px;
+}
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 22px 24px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .2s;
+}
+.stat-card:hover { border-color: var(--border); transform: translateY(-2px); }
+.stat-card::after {
+  content: '';
+  position: absolute; top: 0; right: 0; width: 80px; height: 80px;
+  background: radial-gradient(circle, rgba(168,85,247,.1), transparent 70%);
+}
+.stat-val {
+  font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800;
+  color: var(--p); line-height: 1;
+}
+.stat-label { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+/* SECTION HEADER */
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label-tag {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--p); background: rgba(168,85,247,.1);
+  border: 1px solid var(--border); border-radius: 100px; padding: 3px 10px;
+}
+
+/* BTN */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 12px; border: none;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--p), var(--p2));
+  color: #fff; box-shadow: 0 4px 20px var(--glow);
+}
+.btn-primary:hover { box-shadow: 0 6px 28px var(--glow); transform: translateY(-1px); }
+.btn-ghost {
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--muted2);
+}
+.btn-ghost:hover { border-color: var(--border); color: var(--text); }
+.btn-danger-ghost {
+  background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2);
+  color: var(--danger);
+}
+.btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 8px; }
+
+/* STUDENTS TABLE */
+.students-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 24px; overflow: hidden; margin-bottom: 36px;
+}
+.student-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 90px 90px 110px 80px;
+  align-items: center; gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border2);
+  transition: background .15s;
+}
+.student-row:last-child { border-bottom: none; }
+.student-row:hover { background: var(--bg3); }
+.student-row.header {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); padding: 14px 24px;
+  background: var(--bg3); border-bottom: 1px solid var(--border2);
+}
+.student-row.header:hover { background: var(--bg3); }
+
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; flex-shrink: 0;
+}
+.student-name { font-size: 14px; font-weight: 600; }
+.student-handle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.progress-cell {}
+.progress-bar-wrap { height: 5px; background: var(--bg4); border-radius: 5px; margin-top: 4px; }
+.progress-bar { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--p), var(--p2)); }
+.progress-pct { font-size: 12px; font-weight: 700; }
+
+.streak-cell { font-size: 13px; font-weight: 700; }
+.streak-active { color: var(--warn); }
+.streak-inactive { color: var(--muted); }
+
+.words-cell { font-size: 14px; font-weight: 600; text-align: right; }
+.words-sub { font-size: 10px; color: var(--muted); }
+
+.assign-btn-cell { text-align: right; }
+
+/* STATUS DOT */
+.status-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  margin-right: 6px; vertical-align: middle;
+}
+.status-active { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.status-idle { background: var(--warn); }
+.status-inactive { background: var(--muted); }
+
+/* PACKS SECTION */
+.packs-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px; margin-bottom: 36px;
+}
+.pack-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 18px; padding: 20px;
+  transition: border-color .2s, transform .2s;
+  position: relative;
+}
+.pack-card:hover { border-color: var(--border); transform: translateY(-2px); }
+.pack-emoji { font-size: 24px; margin-bottom: 10px; }
+.pack-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.pack-desc { font-size: 11px; color: var(--muted2); margin-bottom: 14px; line-height: 1.5; }
+.pack-footer { display: flex; align-items: center; justify-content: space-between; }
+.pack-count { font-size: 11px; color: var(--muted); }
+.pack-actions { display: flex; gap: 6px; }
+
+/* ADD PACK CARD */
+.pack-card-add {
+  background: transparent; border: 1.5px dashed var(--border2);
+  border-radius: 18px; padding: 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; cursor: pointer; min-height: 140px;
+  transition: border-color .2s, background .2s;
+  color: var(--muted);
+}
+.pack-card-add:hover { border-color: var(--border); background: rgba(168,85,247,.04); color: var(--p); }
+.pack-add-icon { font-size: 24px; }
+.pack-add-label { font-size: 13px; font-weight: 600; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 28px; padding: 36px; width: 520px; max-width: 90vw;
+  transform: translateY(20px) scale(.97);
+  transition: transform .25s;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
+.modal-title {
+  font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800;
+  margin-bottom: 6px;
+}
+.modal-sub { font-size: 13px; color: var(--muted2); margin-bottom: 28px; line-height: 1.6; }
+.modal-close {
+  position: absolute; top: 24px; right: 24px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--muted); font-size: 16px;
+  transition: background .15s, color .15s;
+}
+.modal-close:hover { background: var(--bg4); color: var(--text); }
+
+/* FORM */
+.form-group { margin-bottom: 18px; }
+.form-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--muted); margin-bottom: 8px; display: block;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%; background: var(--bg3);
+  border: 1.5px solid var(--border2); border-radius: 12px;
+  padding: 12px 14px; font-family: 'Inter', sans-serif;
+  font-size: 14px; color: var(--text);
+  transition: border-color .2s;
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--p);
+}
+.form-textarea { resize: vertical; min-height: 100px; }
+.form-select { appearance: none; cursor: pointer; }
+option { background: var(--bg3); }
+
+.scope-select {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 20px;
+}
+.scope-opt {
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  border-radius: 12px; padding: 12px 10px; text-align: center;
+  cursor: pointer; transition: all .15s;
+}
+.scope-opt:hover { border-color: var(--border); }
+.scope-opt.active { border-color: var(--p); background: rgba(168,85,247,.1); }
+.scope-opt-icon { font-size: 20px; margin-bottom: 4px; }
+.scope-opt-label { font-size: 11px; font-weight: 700; display: block; }
+.scope-opt-desc { font-size: 9px; color: var(--muted); margin-top: 2px; display: block; }
+
+.words-input-area { }
+.word-row {
+  display: flex; gap: 8px; margin-bottom: 8px;
+}
+.word-row .form-input { flex: 1; }
+.word-remove {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.2);
+  color: var(--danger); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; font-size: 16px;
+  flex-shrink: 0; transition: background .15s;
+}
+.word-remove:hover { background: rgba(248,113,113,.2); }
+.word-headers {
+  display: grid; grid-template-columns: 1fr 1fr 38px;
+  gap: 8px; margin-bottom: 6px;
+}
+.word-header-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted);
+}
+
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px;
+}
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 32px; right: 32px; z-index: 300;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 14px 20px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 500;
+  transform: translateY(80px); opacity: 0;
+  transition: transform .3s, opacity .3s;
+  max-width: 340px; box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-icon { font-size: 18px; }
+
+/* EMPTY */
+.empty-state {
+  padding: 48px; text-align: center; color: var(--muted);
+  font-size: 14px;
+}
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+/* ASSIGN TAG */
+.assign-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 6px;
+}
+.assign-tag-school { background: rgba(96,165,250,.12); color: #60a5fa; }
+.assign-tag-group  { background: rgba(168,85,247,.12); color: var(--p); }
+.assign-tag-user   { background: rgba(52,211,153,.12); color: var(--success); }
+
+/* AVATAR COLORS */
+.av-purple { background: rgba(168,85,247,.2); color: var(--p); }
+.av-green  { background: rgba(52,211,153,.15); color: var(--success); }
+.av-yellow { background: rgba(251,191,36,.15); color: var(--warn); }
+.av-blue   { background: rgba(96,165,250,.15); color: #60a5fa; }
+.av-red    { background: rgba(248,113,113,.15); color: var(--danger); }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border2); margin: 36px 0; }
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="app">
+  <nav>
+    <div class="nav-logo">💊 <span>WordPill</span></div>
+    <div class="nav-right">
+      <div class="nav-teacher-name" id="navTeacherName">—</div>
+      <div class="nav-badge">👨‍🏫 Преподаватель</div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Loading -->
+    <div class="state-screen" id="stateLoading">
+      <div class="spinner"></div>
+      <div class="state-title">Загружаем данные...</div>
+    </div>
+
+    <!-- Error -->
+    <div class="state-screen" id="stateError" style="display:none">
+      <div class="state-icon">🔒</div>
+      <div class="state-title">Доступ не найден</div>
+      <div class="state-sub">Проверь ссылку — возможно токен некорректный или истёк.</div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display:none">
+
+      <!-- Stats -->
+      <div class="stats-row" id="statsRow"></div>
+
+      <!-- Students -->
+      <div class="section-head">
+        <div class="section-title">
+          👥 Ученики
+          <span class="section-label-tag" id="studentsCount">0</span>
+        </div>
+      </div>
+
+      <div class="students-card">
+        <div class="student-row header">
+          <div></div>
+          <div>Ученик</div>
+          <div>Прогресс</div>
+          <div>Серия</div>
+          <div style="text-align:right">Слов</div>
+          <div style="text-align:right">Пак</div>
+        </div>
+        <div id="studentsList"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Packs -->
+      <div class="section-head">
+        <div class="section-title">
+          📚 Паки слов
+        </div>
+        <button class="btn btn-primary" onclick="openCreatePack()">+ Создать пак</button>
+      </div>
+
+      <div class="packs-grid" id="packsGrid">
+        <div class="pack-card-add" onclick="openCreatePack()">
+          <div class="pack-add-icon">＋</div>
+          <div class="pack-add-label">Новый пак</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Assign Pack -->
+<div class="modal-overlay" id="modalAssign">
+  <div class="modal" style="position:relative">
+    <div class="modal-close" onclick="closeModal('modalAssign')">✕</div>
+    <div class="modal-title">Назначить пак</div>
+    <div class="modal-sub" id="assignPackName">Выбери кому назначить этот пак слов.</div>
+
+    <div class="scope-select">
+      <div class="scope-opt" data-scope="school" onclick="selectScope('school')">
+        <div class="scope-opt-icon">🏫</div>
+        <span class="scope-opt-label">Школе</span>
+        <span class="scope-opt-desc">Всем ученикам</span>
+      </div>
+      <div class="scope-opt active" data-scope="group" onclick="selectScope('group')">
+        <div class="scope-opt-icon">👥</div>
+        <span class="scope-opt-label">Группе</span>
+        <span class="scope-opt-desc">Моим ученикам</span>
+      </div>
+      <div class="scope-opt" data-scope="user" onclick="selectScope('user')">
+        <div class="scope-opt-icon">👤</div>
+        <span class="scope-opt-label">Ученику</span>
+        <span class="scope-opt-desc">Одному конкретному</span>
+      </div>
+    </div>
+
+    <div id="studentSelectWrap" style="display:none" class="form-group">
+      <label class="form-label">Выбери ученика</label>
+      <select class="form-select" id="studentSelect"></select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalAssign')">Отмена</button>
+      <button class="btn btn-primary" onclick="doAssign()">Назначить →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create Pack -->
+<div class="modal-overlay" id="modalCreatePack">
+  <div class="modal" style="position:relative">
+    <div class="modal-close" onclick="closeModal('modalCreatePack')">✕</div>
+    <div class="modal-title">Новый пак слов</div>
+    <div class="modal-sub">Создай набор слов для своей группы. Можно назначить сразу после создания.</div>
+
+    <div class="form-group">
+      <label class="form-label">Название пака</label>
+      <input type="text" class="form-input" id="packTitle" placeholder="Например: Кардиология — базовый">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание</label>
+      <input type="text" class="form-input" id="packDesc" placeholder="Краткое описание (необязательно)">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Слова пака</label>
+      <div class="word-headers">
+        <div class="word-header-label">Слово (EN)</div>
+        <div class="word-header-label">Перевод (RU)</div>
+        <div></div>
+      </div>
+      <div id="wordRows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addWordRow()" style="margin-top:8px; width:100%">+ Добавить слово</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalCreatePack')">Отмена</button>
+      <button class="btn btn-primary" onclick="doCreatePack()">Создать пак →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✓</span>
+  <span id="toastMsg">Готово!</span>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const AV_COLORS = ['av-purple','av-green','av-yellow','av-blue','av-red'];
+const PACK_EMOJIS = { anatomy:'🦴', symptoms:'🩺', procedures:'🔬', lab:'🧪', general:'📋' };
+
+let teacher = null;
+let students = [];
+let packs = [];
+let assignPackId = null;
+let assignScope = 'group';
+let packWordCount = {};
+
+// ─── INIT ───
+async function init() {
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) { showError(); return; }
+
+  // Load teacher
+  const { data: t, error: te } = await sb.from('teachers').select('*').eq('token', token).single();
+  if (te || !t) { showError(); return; }
+  teacher = t;
+
+  document.getElementById('navTeacherName').textContent = t.name;
+  document.getElementById('stateLoading').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  await Promise.all([loadStudents(), loadPacks()]);
+  renderStats();
+  renderStudents();
+  renderPacks();
+}
+
+function showError() {
+  document.getElementById('stateLoading').style.display = 'none';
+  document.getElementById('stateError').style.display = 'flex';
+}
+
+// ─── DATA ───
+async function loadStudents() {
+  // Get teacher's students
+  const { data: links } = await sb.from('teacher_students')
+    .select('user_id').eq('teacher_id', teacher.id);
+
+  if (!links || links.length === 0) { students = []; return; }
+  const ids = links.map(l => l.user_id);
+
+  // Get user info
+  const { data: users } = await sb.from('users').select('*').in('id', ids);
+
+  // Get word counts
+  const { data: wordCounts } = await sb.from('words')
+    .select('user_id').in('user_id', ids);
+
+  // Get study sessions
+  const { data: sessions } = await sb.from('study_sessions')
+    .select('user_id, cards_correct, cards_total').in('user_id', ids);
+
+  students = (users || []).map(u => {
+    const wc = (wordCounts || []).filter(w => w.user_id === u.id).length;
+    const sess = (sessions || []).filter(s => s.user_id === u.id);
+    const totalCorrect = sess.reduce((a, s) => a + (s.cards_correct || 0), 0);
+    const totalCards = sess.reduce((a, s) => a + (s.cards_total || 0), 0);
+    const pct = totalCards > 0 ? Math.round(totalCorrect / totalCards * 100) : 0;
+    return { ...u, wordCount: wc, accuracy: pct, totalCards };
+  });
+}
+
+async function loadPacks() {
+  const { data } = await sb.from('packs').select('*').order('created_at', { ascending: false });
+  packs = data || [];
+
+  // Get word counts per pack
+  const { data: pw } = await sb.from('pack_words').select('pack_id');
+  packWordCount = {};
+  (pw || []).forEach(p => { packWordCount[p.pack_id] = (packWordCount[p.pack_id] || 0) + 1; });
+}
+
+// ─── RENDER ───
+function renderStats() {
+  const active = students.filter(s => s.last_study_date === new Date().toISOString().slice(0,10)).length;
+  const totalWords = students.reduce((a, s) => a + s.wordCount, 0);
+  const avgAcc = students.length ? Math.round(students.reduce((a,s) => a + s.accuracy, 0) / students.length) : 0;
+  const maxStreak = students.length ? Math.max(...students.map(s => s.streak_days || 0)) : 0;
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${students.length}</div><div class="stat-label">Учеников в группе</div></div>
+    <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-label">Занимались сегодня</div></div>
+    <div class="stat-card"><div class="stat-val">${totalWords}</div><div class="stat-label">Слов добавлено</div></div>
+    <div class="stat-card"><div class="stat-val">${avgAcc}%</div><div class="stat-label">Средний результат</div></div>
+  `;
+}
+
+function renderStudents() {
+  document.getElementById('studentsCount').textContent = students.length;
+  const list = document.getElementById('studentsList');
+
+  if (!students.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div>Нет учеников. Попроси администратора добавить учеников в твою группу.</div>`;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  list.innerHTML = students.map((s, i) => {
+    const initials = ((s.first_name || '?')[0] + (s.last_name || '?')[0]).toUpperCase();
+    const color = AV_COLORS[i % AV_COLORS.length];
+    const isActive = s.last_study_date === today;
+    const isIdle = s.streak_days > 0 && !isActive;
+    const statusClass = isActive ? 'status-active' : isIdle ? 'status-idle' : 'status-inactive';
+    const streakClass = s.streak_days > 0 ? 'streak-active' : 'streak-inactive';
+    const streakText = s.streak_days > 0 ? `🔥 ${s.streak_days} дн.` : '— 0 дн.';
+
+    return `
+      <div class="student-row">
+        <div class="avatar ${color}">${initials}</div>
+        <div>
+          <div class="student-name"><span class="status-dot ${statusClass}"></span>${s.first_name || ''} ${s.last_name || ''}</div>
+          <div class="student-handle">@${s.username || '—'}</div>
+        </div>
+        <div class="progress-cell">
+          <div class="progress-pct">${s.accuracy}%</div>
+          <div class="progress-bar-wrap"><div class="progress-bar" style="width:${s.accuracy}%"></div></div>
+        </div>
+        <div class="${streakClass} streak-cell">${streakText}</div>
+        <div class="words-cell">${s.wordCount}<div class="words-sub">слов</div></div>
+        <div class="assign-btn-cell">
+          <button class="btn btn-ghost btn-sm" onclick="openAssignToUser(${s.id}, '${(s.first_name || '') + ' ' + (s.last_name || '')}')">Пак →</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPacks() {
+  const grid = document.getElementById('packsGrid');
+  const addCard = `<div class="pack-card-add" onclick="openCreatePack()"><div class="pack-add-icon">＋</div><div class="pack-add-label">Новый пак</div></div>`;
+
+  grid.innerHTML = packs.map(p => {
+    const emoji = PACK_EMOJIS[p.category] || '📦';
+    const count = packWordCount[p.id] || 0;
+    const isOwn = p.teacher_id === teacher.id;
+    return `
+      <div class="pack-card">
+        <div class="pack-emoji">${emoji}</div>
+        <div class="pack-title">${p.title}</div>
+        <div class="pack-desc">${p.description || ''}</div>
+        <div class="pack-footer">
+          <div class="pack-count">${count} слов${isOwn ? ' · Мой пак' : ''}</div>
+          <div class="pack-actions">
+            <button class="btn btn-primary btn-sm" onclick="openAssign(${p.id}, '${p.title.replace(/'/g,"\\'")}')">Назначить</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('') + addCard;
+}
+
+// ─── ASSIGN ───
+function openAssign(packId, packTitle) {
+  assignPackId = packId;
+  assignScope = 'group';
+  document.getElementById('assignPackName').textContent = `Пак: "${packTitle}"`;
+  selectScope('group');
+  populateStudentSelect();
+  openModal('modalAssign');
+}
+
+function openAssignToUser(userId, userName) {
+  // Open assign modal pre-set to user scope for specific student
+  assignScope = 'user';
+  assignPackId = null; // will pick from select
+  selectScope('user');
+  // Populate pack select instead... for simplicity open full assign
+  openModal('modalAssign');
+  document.getElementById('assignPackName').textContent = `Назначить пак для: ${userName.trim()}`;
+  // Pre-select this student
+  setTimeout(() => {
+    const sel = document.getElementById('studentSelect');
+    if (sel) sel.value = userId;
+  }, 50);
+}
+
+function selectScope(scope) {
+  assignScope = scope;
+  document.querySelectorAll('.scope-opt').forEach(el => {
+    el.classList.toggle('active', el.dataset.scope === scope);
+  });
+  document.getElementById('studentSelectWrap').style.display = scope === 'user' ? 'block' : 'none';
+}
+
+function populateStudentSelect() {
+  const sel = document.getElementById('studentSelect');
+  sel.innerHTML = students.map(s =>
+    `<option value="${s.id}">${s.first_name || ''} ${s.last_name || ''} (@${s.username || '?'})</option>`
+  ).join('');
+}
+
+async function doAssign() {
+  if (!assignPackId) { toast('❗', 'Сначала выбери пак'); return; }
+  const row = {
+    pack_id: assignPackId,
+    teacher_id: teacher.id,
+    scope: assignScope,
+    user_id: assignScope === 'user' ? parseInt(document.getElementById('studentSelect').value) : null,
+  };
+  const { error } = await sb.from('pack_assignments').insert(row);
+  if (error) { toast('❌', 'Ошибка при назначении'); return; }
+  closeModal('modalAssign');
+  const scopeLabels = { school: 'всей школе', group: 'твоей группе', user: 'ученику' };
+  toast('✅', `Пак назначен ${scopeLabels[assignScope]}`);
+}
+
+// ─── CREATE PACK ───
+function openCreatePack() {
+  document.getElementById('packTitle').value = '';
+  document.getElementById('packDesc').value = '';
+  document.getElementById('wordRows').innerHTML = '';
+  addWordRow(); addWordRow(); addWordRow();
+  openModal('modalCreatePack');
+}
+
+function addWordRow() {
+  const div = document.createElement('div');
+  div.className = 'word-row';
+  div.innerHTML = `
+    <input type="text" class="form-input word-en" placeholder="Auscultation">
+    <input type="text" class="form-input word-ru" placeholder="Аускультация">
+    <button class="word-remove" onclick="this.parentElement.remove()">−</button>
+  `;
+  document.getElementById('wordRows').appendChild(div);
+}
+
+async function doCreatePack() {
+  const title = document.getElementById('packTitle').value.trim();
+  if (!title) { toast('❗', 'Введи название пака'); return; }
+
+  const rows = document.querySelectorAll('#wordRows .word-row');
+  const words = [];
+  rows.forEach(r => {
+    const en = r.querySelector('.word-en').value.trim();
+    const ru = r.querySelector('.word-ru').value.trim();
+    if (en && ru) words.push({ word: en, translation: ru, category: 'general' });
+  });
+
+  if (words.length === 0) { toast('❗', 'Добавь хотя бы одно слово'); return; }
+
+  // Create pack
+  const { data: pack, error: pe } = await sb.from('packs').insert({
+    title,
+    description: document.getElementById('packDesc').value.trim() || null,
+    teacher_id: teacher.id,
+    category: 'general',
+  }).select().single();
+
+  if (pe || !pack) { toast('❌', 'Ошибка создания пака'); return; }
+
+  // Insert words
+  const wordRows = words.map(w => ({ ...w, pack_id: pack.id }));
+  const { error: we } = await sb.from('pack_words').insert(wordRows);
+  if (we) { toast('❌', 'Ошибка добавления слов'); return; }
+
+  closeModal('modalCreatePack');
+  toast('✅', `Пак "${title}" создан (${words.length} слов)`);
+  await loadPacks();
+  renderPacks();
+}
+
+// ─── UTILS ───
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+let toastTimer;
+function toast(icon, msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+init();
+</script>
+</body>
+</html>
