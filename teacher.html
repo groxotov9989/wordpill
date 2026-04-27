@@ -525,6 +525,42 @@ option { background: var(--bg3); }
   </div>
 </div>
 
+<!-- Modal: Edit Pack -->
+<div class="modal-overlay" id="modalEditPack">
+  <div class="modal" style="position:relative">
+    <div class="modal-close" onclick="closeModal('modalEditPack')">✕</div>
+    <div class="modal-title">Редактировать пак</div>
+    <div class="modal-sub">Измени название, отредактируй или удали слова, добавь новые.</div>
+
+    <div class="form-group">
+      <label class="form-label">Название пака</label>
+      <input type="text" class="form-input" id="editPackTitle">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание</label>
+      <input type="text" class="form-input" id="editPackDesc">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Слова пака</label>
+      <div class="word-headers">
+        <div class="word-header-label">Слово (EN)</div>
+        <div class="word-header-label">Перевод (RU)</div>
+        <div></div>
+      </div>
+      <div id="editWordRows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addEditWordRow()" style="margin-top:8px; width:100%">+ Добавить слово</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger-ghost" onclick="doDeletePack()">Удалить пак</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeModal('modalEditPack')">Отмена</button>
+      <button class="btn btn-primary" onclick="doSavePack()">Сохранить →</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <span class="toast-icon" id="toastIcon">✓</span>
@@ -683,6 +719,7 @@ function renderPacks() {
         <div class="pack-footer">
           <div class="pack-count">${count} слов${isOwn ? ' · Мой пак' : ''}</div>
           <div class="pack-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openEditPack(${p.id})">Редактировать</button>
             <button class="btn btn-primary btn-sm" onclick="openAssign(${p.id}, '${p.title.replace(/'/g,"\\'")}')">Назначить</button>
           </div>
         </div>
@@ -819,6 +856,101 @@ function toast(icon, msg) {
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
+
+// ─── EDIT PACK ───
+let editPackId = null;
+let editPackExistingWordIds = new Set();
+
+async function openEditPack(packId) {
+  editPackId = packId;
+  editPackExistingWordIds = new Set();
+  deletedWordIds = [];
+
+  const pack = packs.find(p => p.id === packId);
+  if (!pack) return;
+
+  document.getElementById('editPackTitle').value = pack.title;
+  document.getElementById('editPackDesc').value = pack.description || '';
+  document.getElementById('editWordRows').innerHTML = '';
+
+  // Load existing words
+  const { data: words } = await sb.from('pack_words').select('*').eq('pack_id', packId).order('id');
+  (words || []).forEach(w => {
+    editPackExistingWordIds.add(w.id);
+    addEditWordRow(w.id, w.word, w.translation);
+  });
+
+  openModal('modalEditPack');
+}
+
+function addEditWordRow(wordId = null, en = '', ru = '') {
+  const div = document.createElement('div');
+  div.className = 'word-row';
+  div.dataset.wordId = wordId || '';
+  div.innerHTML = `
+    <input type="text" class="form-input word-en" placeholder="Auscultation" value="${en}">
+    <input type="text" class="form-input word-ru" placeholder="Аускультация" value="${ru}">
+    <button class="word-remove" onclick="removeEditWordRow(this, ${wordId || 'null'})">−</button>
+  `;
+  document.getElementById('editWordRows').appendChild(div);
+}
+
+// Track deleted existing word IDs
+let deletedWordIds = [];
+
+function removeEditWordRow(btn, wordId) {
+  if (wordId) deletedWordIds.push(wordId);
+  btn.parentElement.remove();
+}
+
+async function doSavePack() {
+  const title = document.getElementById('editPackTitle').value.trim();
+  if (!title) { toast('❗', 'Введи название пака'); return; }
+
+  // 1. Update pack metadata
+  const { error: pe } = await sb.from('packs').update({
+    title,
+    description: document.getElementById('editPackDesc').value.trim() || null,
+  }).eq('id', editPackId);
+  if (pe) { toast('❌', 'Ошибка сохранения пака'); return; }
+
+  // 2. Delete removed words
+  if (deletedWordIds.length > 0) {
+    await sb.from('pack_words').delete().in('id', deletedWordIds);
+  }
+
+  // 3. Save each row — update existing, insert new
+  const rows = document.querySelectorAll('#editWordRows .word-row');
+  for (const row of rows) {
+    const en = row.querySelector('.word-en').value.trim();
+    const ru = row.querySelector('.word-ru').value.trim();
+    if (!en || !ru) continue;
+    const wid = row.dataset.wordId ? parseInt(row.dataset.wordId) : null;
+
+    if (wid) {
+      await sb.from('pack_words').update({ word: en, translation: ru }).eq('id', wid);
+    } else {
+      await sb.from('pack_words').insert({ pack_id: editPackId, word: en, translation: ru, category: 'general' });
+    }
+  }
+
+  deletedWordIds = [];
+  closeModal('modalEditPack');
+  toast('✅', 'Пак сохранён');
+  await loadPacks();
+  renderPacks();
+}
+
+async function doDeletePack() {
+  if (!confirm('Удалить пак полностью? Это действие нельзя отменить.')) return;
+  // pack_words удалятся каскадно через FK
+  const { error } = await sb.from('packs').delete().eq('id', editPackId);
+  if (error) { toast('❌', 'Ошибка удаления'); return; }
+  closeModal('modalEditPack');
+  toast('🗑️', 'Пак удалён');
+  await loadPacks();
+  renderPacks();
+}
 
 init();
 </script>
