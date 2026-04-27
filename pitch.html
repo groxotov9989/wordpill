@@ -720,6 +720,92 @@ footer {
 .footer-note { font-size: 12px; color: var(--muted); }
 
 /* ─────────────────────────────────────────────
+   SECTION: TEACHER DASHBOARD
+───────────────────────────────────────────── */
+#teacher {
+  padding: 80px 48px 120px;
+  max-width: 1200px; margin: 0 auto;
+}
+.teacher-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: center;
+  margin-top: 64px;
+}
+.dash-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 28px; padding: 28px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  position: relative; overflow: hidden;
+}
+.dash-wrap::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.dash-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 24px;
+}
+.dash-title {
+  font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
+}
+.dash-date { font-size: 11px; color: var(--muted); }
+
+.dash-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 24px;
+}
+.dash-stat {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 14px 16px;
+}
+.dash-stat-val {
+  font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+  color: var(--p); line-height: 1;
+}
+.dash-stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+.dash-students-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px;
+}
+.dash-student {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border2);
+}
+.dash-student:last-child { border-bottom: none; }
+.dash-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; flex-shrink: 0;
+}
+.dash-student-info { flex: 1; min-width: 0; }
+.dash-student-name { font-size: 13px; font-weight: 600; }
+.dash-student-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.dash-student-right { text-align: right; flex-shrink: 0; }
+.dash-streak { font-size: 11px; font-weight: 700; color: var(--warn); }
+.dash-bar-wrap { width: 80px; height: 4px; background: var(--bg4); border-radius: 4px; margin-top: 5px; margin-left: auto; }
+.dash-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--p), var(--p2)); }
+
+.dash-pack-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border2); }
+.dash-pack-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 12px; margin-bottom: 8px;
+  font-size: 12px;
+}
+.dash-pack-name { font-weight: 600; }
+.dash-pack-cnt { font-size: 10px; color: var(--muted); }
+.dash-pack-btn {
+  font-size: 10px; font-weight: 700; color: var(--p);
+  background: rgba(168,85,247,.1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 10px;
+}
+
+/* ─────────────────────────────────────────────
    UTILITIES
 ───────────────────────────────────────────── */
 .text-center { text-align: center; }
@@ -991,6 +1077,102 @@ footer {
       <div class="feat-icon" style="background:rgba(168,85,247,.12)">🎯</div>
       <div class="feat-title">Цель на день</div>
       <div class="feat-desc">Прогресс-бар показывает сколько слов повторил сегодня. Мотивирует возвращаться каждый день.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TEACHER DASHBOARD -->
+<section id="teacher">
+  <div class="text-center reveal">
+    <div class="section-label">Для преподавателя</div>
+    <h2 class="section-h2">Полный контроль над группой</h2>
+    <p class="section-sub" style="margin: 0 auto;">Каждый преподаватель видит своих учеников: кто занимается, кто пропускает, и как растёт словарный запас.</p>
+  </div>
+  <div class="teacher-grid">
+    <div class="reveal-left">
+      <div class="demo-text-label">Дашборд преподавателя</div>
+      <h3 class="demo-title">Видишь всё — тратишь ноль времени</h3>
+      <p class="demo-desc">Данные из Supabase в реальном времени. Не нужно спрашивать учеников "ты занимался?" — всё видно самому.</p>
+      <div class="demo-points">
+        <div class="demo-point"><div class="demo-point-dot"></div>Вовлечённость каждого ученика — серия дней, слов добавлено, % правильных ответов</div>
+        <div class="demo-point"><div class="demo-point-dot"></div>Самостоятельно добавляй паки слов для своей группы</div>
+        <div class="demo-point"><div class="demo-point-dot"></div>Данные обновляются автоматически — никаких ручных отчётов</div>
+      </div>
+    </div>
+    <div class="reveal-right">
+      <div class="dash-wrap">
+        <div class="dash-header">
+          <div class="dash-title">💊 Группа А · Апрель 2026</div>
+          <div class="dash-date">Обновлено только что</div>
+        </div>
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <div class="dash-stat-val">8</div>
+            <div class="dash-stat-label">Учеников активны</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-val">312</div>
+            <div class="dash-stat-label">Слов добавлено</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-val">74%</div>
+            <div class="dash-stat-label">Правильных ответов</div>
+          </div>
+        </div>
+        <div class="dash-students-label">Ученики</div>
+        <div class="dash-student">
+          <div class="dash-avatar" style="background:rgba(168,85,247,.2);color:var(--p)">АМ</div>
+          <div class="dash-student-info">
+            <div class="dash-student-name">Анна М.</div>
+            <div class="dash-student-meta">47 слов · 82% правильных</div>
+          </div>
+          <div class="dash-student-right">
+            <div class="dash-streak">🔥 14 дней</div>
+            <div class="dash-bar-wrap"><div class="dash-bar" style="width:82%"></div></div>
+          </div>
+        </div>
+        <div class="dash-student">
+          <div class="dash-avatar" style="background:rgba(52,211,153,.15);color:var(--success)">ДК</div>
+          <div class="dash-student-info">
+            <div class="dash-student-name">Дмитрий К.</div>
+            <div class="dash-student-meta">38 слов · 71% правильных</div>
+          </div>
+          <div class="dash-student-right">
+            <div class="dash-streak">🔥 7 дней</div>
+            <div class="dash-bar-wrap"><div class="dash-bar" style="width:71%"></div></div>
+          </div>
+        </div>
+        <div class="dash-student">
+          <div class="dash-avatar" style="background:rgba(251,191,36,.12);color:var(--warn)">ОП</div>
+          <div class="dash-student-info">
+            <div class="dash-student-name">Ольга П.</div>
+            <div class="dash-student-meta">21 слово · 58% правильных</div>
+          </div>
+          <div class="dash-student-right">
+            <div class="dash-streak" style="color:var(--muted)">— 2 дня</div>
+            <div class="dash-bar-wrap"><div class="dash-bar" style="width:58%;background:var(--warn)"></div></div>
+          </div>
+        </div>
+        <div class="dash-pack-section">
+          <div class="dash-students-label">Паки слов для группы</div>
+          <div class="dash-pack-row">
+            <div>
+              <div class="dash-pack-name">📚 Анатомия — базовый</div>
+              <div class="dash-pack-cnt">64 слова</div>
+            </div>
+            <div class="dash-pack-btn">Назначен</div>
+          </div>
+          <div class="dash-pack-row">
+            <div>
+              <div class="dash-pack-name">🩺 Симптомы и диагнозы</div>
+              <div class="dash-pack-cnt">48 слов</div>
+            </div>
+            <div class="dash-pack-btn">+ Добавить</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
