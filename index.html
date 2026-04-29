@@ -938,9 +938,19 @@ async function init() {
     if (tg) { tg.ready(); tg.expand(); }
 
     const u = tg?.initDataUnsafe?.user;
-    me = u?.id
-        ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
-        : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
+    if (!u?.id) {
+        // Нет реального Telegram пользователя — не даём работать с чужими данными
+        document.getElementById('splash').innerHTML = `
+            <div style="padding:40px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px">
+                <div style="font-size:52px">💊</div>
+                <div style="font-size:20px;font-weight:800">WordPill</div>
+                <div style="font-size:15px;color:var(--muted);line-height:1.6;max-width:280px">
+                    Открой приложение через Telegram — нажми кнопку в боте @WordPillBot
+                </div>
+            </div>`;
+        return;
+    }
+    me = { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id };
 
     const isNew = await upsertUser();
     await loadWords();
@@ -1187,18 +1197,30 @@ async function submitWord() {
         btn.disabled = false;
         cancelEdit(); renderWords(); showToast('Сохранено');
     } else {
-        const { data, error } = await db.from('words').insert({
-            user_id: me.id, word, translation, category, next_review: new Date().toISOString()
-        }).select().single();
-        btn.disabled = false; btn.textContent = 'Добавить слово';
-        if (error) { showToast('Ошибка добавления'); return; }
-        words.unshift(data);
+        // Оптимистичный апдейт — сразу показываем слово, не ждём БД
+        const tempId = 'tmp_' + Date.now();
+        const tempWord = {
+            id: tempId, user_id: me.id, word, translation, category,
+            next_review: new Date().toISOString(),
+            times_correct: 0, times_wrong: 0, created_at: new Date().toISOString()
+        };
+        words.unshift(tempWord);
         document.getElementById('inputWord').value = '';
         document.getElementById('inputTranslation').value = '';
         document.getElementById('translateHint').style.display = 'none';
         resetCatPicker();
+        btn.disabled = false; btn.textContent = 'Добавить слово';
         updateHeader(); renderWords();
         showToast('Слово добавлено'); showScreen('words');
+
+        // Сохраняем в БД фоном, заменяем tempId на реальный
+        db.from('words').insert({
+            user_id: me.id, word, translation, category, next_review: new Date().toISOString()
+        }).select().single().then(({ data, error }) => {
+            if (error) { showToast('Ошибка сохранения — проверь сеть'); words = words.filter(w => w.id !== tempId); renderWords(); return; }
+            const idx = words.findIndex(w => w.id === tempId);
+            if (idx >= 0) words[idx] = data;
+        });
     }
 }
 
@@ -1548,7 +1570,6 @@ async function addFromPack(pwId, word, translation, category) {
     const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
     if (btn) { btn.classList.add('added'); btn.disabled = true; btn.innerHTML = ICON.check; }
     updateHeader();
-    renderWords();
     showToast(`✓ ${word} добавлено`);
 }
 
