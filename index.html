@@ -1227,6 +1227,8 @@ async function submitWord() {
 function openEdit(id) {
     closeSwipes();
     const w = words.find(w => w.id === id); if (!w) return;
+    // Не редактируем слово пока оно ещё сохраняется в БД
+    if (String(id).startsWith('tmp_')) { showToast('Слово ещё сохраняется, подожди секунду'); return; }
     editId = id;
     selectedCat = w.category || 'general';
     selectedCatLabel = getCatLabel(selectedCat);
@@ -1420,10 +1422,12 @@ async function answer(q) {
     const upd = sm2(c, q);
     const tc = (c.times_correct||0) + (q===1?1:0);
     const tw = (c.times_wrong  ||0) + (q===0?1:0);
-    await db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id);
+    // Обновляем локально сразу — не ждём БД
     const i = words.findIndex(w => w.id === c.id);
     if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
     session.idx++; session.shown = false; renderCard();
+    // Пишем в БД фоном
+    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id);
 }
 
 // ── QUIZ ──────────────────────────────────────────────────────────────────
@@ -1436,8 +1440,10 @@ function renderQuiz() {
     const question      = c.rev ? esc(c.translation) : esc(c.word);
     const correctAnswer = c.rev ? c.word : c.translation;
     const answerField   = c.rev ? 'word' : 'translation';
-    const others = words.filter(w => w.id !== c.id).sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
-    const options = [...others, correctAnswer].sort(() => Math.random()-0.5);
+    const pool = words.filter(w => w.id !== c.id && w[answerField] && w[answerField] !== correctAnswer);
+    const others = pool.sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
+    // Если слов меньше 4 — quiz недоступен (обработано в startSession)
+    const options = [...new Set([...others, correctAnswer])].sort(() => Math.random()-0.5);
 
     area.innerHTML = `
         <div class="card-meta-row"><span>${session.idx+1} из ${session.cards.length}</span><span>✓${session.ok} ✗${session.bad}</span></div>
@@ -1623,7 +1629,7 @@ async function renderStats() {
     const tc = words.reduce((a, w) => a + (w.times_correct||0), 0);
     const tw = words.reduce((a, w) => a + (w.times_wrong  ||0), 0);
     const rate = tc + tw ? Math.round(tc / (tc + tw) * 100) : 0;
-    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5);
+    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('finished_at', { ascending: false }).limit(5);
 
     area.innerHTML = `
         <div class="stats-grid">
