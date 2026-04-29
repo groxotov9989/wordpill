@@ -1780,7 +1780,7 @@ function showScreen(name) {
     s.style.display = 'block'; void s.offsetWidth; s.classList.add('active');
     const nb = document.getElementById(`nav-${name}`); if (nb) nb.classList.add('active');
     document.getElementById('fabBtn').style.display = name === 'words' ? 'flex' : 'none';
-    if (name === 'words')   renderWords();
+    if (name === 'words')   { renderWords(); window.scrollTo(0, 0); }
     if (name === 'cards')   initCards();
     if (name === 'stats')   renderStats();
     if (name === 'library') renderLibrary();
