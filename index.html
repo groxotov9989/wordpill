@@ -885,7 +885,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const DAILY_GOAL   = 10;
 
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+let db; // инициализируется после авторизации через Edge Function
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────
 const DEFAULT_CATS = [
@@ -937,22 +937,25 @@ function getCatLabel(key) { return allCatList().find(c => c.key === key)?.label 
 async function init() {
     if (tg) { tg.ready(); tg.expand(); }
 
-    const u = tg?.initDataUnsafe?.user;
-    if (!u?.id) {
-        // Нет реального Telegram пользователя — не даём работать с чужими данными
-        document.getElementById('splash').innerHTML = `
-            <div style="padding:40px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px">
-                <div style="font-size:52px">💊</div>
-                <div style="font-size:20px;font-weight:800">WordPill</div>
-                <div style="font-size:15px;color:var(--muted);line-height:1.6;max-width:280px">
-                    Открой приложение через Telegram — нажми кнопку в боте @WordPillBot
-                </div>
-            </div>`;
-        return;
-    }
-    me = { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id };
+    // Авторизация через Edge Function — валидирует Telegram initData и возвращает JWT
+    const initData = tg?.initData || '';
+    const authRes = await fetch(`${SUPABASE_URL}/functions/v1/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ init_data: initData })
+    });
+    const authData = await authRes.json();
+    if (!authData.token) { console.error('Auth failed', authData); return; }
 
-    const isNew = await upsertUser();
+    me = authData.user;
+    customCats = authData.user.custom_categories || [];
+
+    // Создаём авторизованный клиент с JWT — все запросы идут от имени пользователя
+    db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+        global: { headers: { Authorization: `Bearer ${authData.token}` } }
+    });
+
+    const isNew = !authData.user.streak_days || authData.user.streak_days === 1;
     await loadWords();
     if (!words.length) await migrate();
 
@@ -979,35 +982,7 @@ function showApp() {
 }
 function finishOnboarding() { showApp(); }
 
-// ── USER / STREAK ─────────────────────────────────────────────────────────
-async function upsertUser() {
-    const today = todayStr();
-    const { data: ex } = await db.from('users').select('*').eq('id', me.id).single();
-
-    if (!ex) {
-        await db.from('users').insert({
-            id: me.id, username: me.username, first_name: me.first_name,
-            last_name: me.last_name, chat_id: me.chat_id,
-            streak_days: 1, last_study_date: today, custom_categories: []
-        });
-        me.streak_days = 1; customCats = []; return true;
-    }
-
-    const yest = new Date(); yest.setDate(yest.getDate() - 1);
-    const yStr = yest.toISOString().split('T')[0];
-    let streak = ex.streak_days || 0;
-    if (ex.last_study_date === yStr)    streak++;
-    else if (ex.last_study_date !== today) streak = 1;
-
-    await db.from('users').update({
-        username: me.username, first_name: me.first_name, chat_id: me.chat_id,
-        last_seen: new Date().toISOString(), streak_days: streak, last_study_date: today
-    }).eq('id', me.id);
-
-    me.streak_days = streak;
-    customCats = ex.custom_categories || [];
-    return false;
-}
+// upsertUser удалён — логика перенесена в Edge Function 'verify'
 
 // ── MIGRATE from CloudStorage ─────────────────────────────────────────────
 async function migrate() {
@@ -1197,38 +1172,24 @@ async function submitWord() {
         btn.disabled = false;
         cancelEdit(); renderWords(); showToast('Сохранено');
     } else {
-        // Оптимистичный апдейт — сразу показываем слово, не ждём БД
-        const tempId = 'tmp_' + Date.now();
-        const tempWord = {
-            id: tempId, user_id: me.id, word, translation, category,
-            next_review: new Date().toISOString(),
-            times_correct: 0, times_wrong: 0, created_at: new Date().toISOString()
-        };
-        words.unshift(tempWord);
+        const { data, error } = await db.from('words').insert({
+            user_id: me.id, word, translation, category, next_review: new Date().toISOString()
+        }).select().single();
+        btn.disabled = false; btn.textContent = 'Добавить слово';
+        if (error) { showToast('Ошибка добавления'); return; }
+        words.unshift(data);
         document.getElementById('inputWord').value = '';
         document.getElementById('inputTranslation').value = '';
         document.getElementById('translateHint').style.display = 'none';
         resetCatPicker();
-        btn.disabled = false; btn.textContent = 'Добавить слово';
         updateHeader(); renderWords();
         showToast('Слово добавлено'); showScreen('words');
-
-        // Сохраняем в БД фоном, заменяем tempId на реальный
-        db.from('words').insert({
-            user_id: me.id, word, translation, category, next_review: new Date().toISOString()
-        }).select().single().then(({ data, error }) => {
-            if (error) { showToast('Ошибка сохранения — проверь сеть'); words = words.filter(w => w.id !== tempId); renderWords(); return; }
-            const idx = words.findIndex(w => w.id === tempId);
-            if (idx >= 0) words[idx] = data;
-        });
     }
 }
 
 function openEdit(id) {
     closeSwipes();
     const w = words.find(w => w.id === id); if (!w) return;
-    // Не редактируем слово пока оно ещё сохраняется в БД
-    if (String(id).startsWith('tmp_')) { showToast('Слово ещё сохраняется, подожди секунду'); return; }
     editId = id;
     selectedCat = w.category || 'general';
     selectedCatLabel = getCatLabel(selectedCat);
@@ -1422,12 +1383,10 @@ async function answer(q) {
     const upd = sm2(c, q);
     const tc = (c.times_correct||0) + (q===1?1:0);
     const tw = (c.times_wrong  ||0) + (q===0?1:0);
-    // Обновляем локально сразу — не ждём БД
+    await db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id);
     const i = words.findIndex(w => w.id === c.id);
     if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
     session.idx++; session.shown = false; renderCard();
-    // Пишем в БД фоном
-    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id);
 }
 
 // ── QUIZ ──────────────────────────────────────────────────────────────────
@@ -1440,10 +1399,8 @@ function renderQuiz() {
     const question      = c.rev ? esc(c.translation) : esc(c.word);
     const correctAnswer = c.rev ? c.word : c.translation;
     const answerField   = c.rev ? 'word' : 'translation';
-    const pool = words.filter(w => w.id !== c.id && w[answerField] && w[answerField] !== correctAnswer);
-    const others = pool.sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
-    // Если слов меньше 4 — quiz недоступен (обработано в startSession)
-    const options = [...new Set([...others, correctAnswer])].sort(() => Math.random()-0.5);
+    const others = words.filter(w => w.id !== c.id).sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
+    const options = [...others, correctAnswer].sort(() => Math.random()-0.5);
 
     area.innerHTML = `
         <div class="card-meta-row"><span>${session.idx+1} из ${session.cards.length}</span><span>✓${session.ok} ✗${session.bad}</span></div>
@@ -1514,43 +1471,15 @@ async function saveSession() {
 // ── LIBRARY (PACKS) ───────────────────────────────────────────────────────
 async function renderLibrary() {
     const el = document.getElementById('libraryContent');
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Загрузка...</div>`;
 
-    // Шаг 1: у каких учителей я числюсь учеником
-    const { data: myTeachers } = await db.from('teacher_students')
-        .select('teacher_id').eq('user_id', me.id);
-    const teacherIds = (myTeachers || []).map(t => t.teacher_id);
-
-    // Шаг 2: какие паки мне назначены
-    // scope = 'user'         → назначен лично мне
-    // scope = 'my_students'  → назначен всем ученикам моего учителя
-    // scope = 'school'       → назначен всей школе
-    const { data: assignments } = await db.from('pack_assignments').select('pack_id, scope, user_id, teacher_id');
-
-    const assignedPackIds = new Set();
-    (assignments || []).forEach(a => {
-        if (a.scope === 'school') { assignedPackIds.add(a.pack_id); return; }
-        if (a.scope === 'user' && a.user_id === me.id) { assignedPackIds.add(a.pack_id); return; }
-        if (a.scope === 'my_students' && teacherIds.includes(a.teacher_id)) { assignedPackIds.add(a.pack_id); return; }
-    });
-
-    if (!assignedPackIds.size) {
-        el.innerHTML = `<div class="empty-state">
-            <div class="empty-icon" style="font-size:36px;margin-bottom:12px">📚</div>
-            <p class="empty-state-text">Пока нет назначенных паков.<br>Преподаватель пришлёт их сюда.</p>
-        </div>`; return;
+    if (!packs.length) {
+        const { data } = await db.from('packs').select('*, pack_words(count)').order('id');
+        packs = data || [];
     }
 
-    // Шаг 3: грузим только назначенные паки
-    const { data } = await db.from('packs')
-        .select('*, pack_words(count)')
-        .in('id', [...assignedPackIds])
-        .order('id');
-    packs = data || [];
-
     el.innerHTML = `
-        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Паки</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Назначены твоим преподавателем</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Библиотека</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Готовые наборы слов — добавляй себе</div>
         ${packs.map(p => `
             <div class="pack-card" onclick="openPack(${p.id})">
                 <div class="pack-card-header">
@@ -1629,7 +1558,7 @@ async function renderStats() {
     const tc = words.reduce((a, w) => a + (w.times_correct||0), 0);
     const tw = words.reduce((a, w) => a + (w.times_wrong  ||0), 0);
     const rate = tc + tw ? Math.round(tc / (tc + tw) * 100) : 0;
-    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('finished_at', { ascending: false }).limit(5);
+    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5);
 
     area.innerHTML = `
         <div class="stats-grid">
