@@ -714,7 +714,6 @@ function renderStudents() {
         <div class="${streakClass} streak-cell">${streakText}</div>
         <div class="words-cell">${s.wordCount}<div class="words-sub">слов</div></div>
         <div class="assign-btn-cell" style="display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-ghost btn-sm" onclick="openAssignToUser(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">Пак →</button>
           <button class="btn btn-danger-ghost btn-sm" onclick="removeStudent(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">✕</button>
         </div>
       </div>
