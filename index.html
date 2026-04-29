@@ -1508,15 +1508,43 @@ async function saveSession() {
 // ── LIBRARY (PACKS) ───────────────────────────────────────────────────────
 async function renderLibrary() {
     const el = document.getElementById('libraryContent');
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Загрузка...</div>`;
 
-    if (!packs.length) {
-        const { data } = await db.from('packs').select('*, pack_words(count)').order('id');
-        packs = data || [];
+    // Шаг 1: у каких учителей я числюсь учеником
+    const { data: myTeachers } = await db.from('teacher_students')
+        .select('teacher_id').eq('user_id', me.id);
+    const teacherIds = (myTeachers || []).map(t => t.teacher_id);
+
+    // Шаг 2: какие паки мне назначены
+    // scope = 'user'         → назначен лично мне
+    // scope = 'my_students'  → назначен всем ученикам моего учителя
+    // scope = 'school'       → назначен всей школе
+    const { data: assignments } = await db.from('pack_assignments').select('pack_id, scope, user_id, teacher_id');
+
+    const assignedPackIds = new Set();
+    (assignments || []).forEach(a => {
+        if (a.scope === 'school') { assignedPackIds.add(a.pack_id); return; }
+        if (a.scope === 'user' && a.user_id === me.id) { assignedPackIds.add(a.pack_id); return; }
+        if (a.scope === 'my_students' && teacherIds.includes(a.teacher_id)) { assignedPackIds.add(a.pack_id); return; }
+    });
+
+    if (!assignedPackIds.size) {
+        el.innerHTML = `<div class="empty-state">
+            <div class="empty-icon" style="font-size:36px;margin-bottom:12px">📚</div>
+            <p class="empty-state-text">Пока нет назначенных паков.<br>Преподаватель пришлёт их сюда.</p>
+        </div>`; return;
     }
 
+    // Шаг 3: грузим только назначенные паки
+    const { data } = await db.from('packs')
+        .select('*, pack_words(count)')
+        .in('id', [...assignedPackIds])
+        .order('id');
+    packs = data || [];
+
     el.innerHTML = `
-        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Библиотека</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Готовые наборы слов — добавляй себе</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Паки</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Назначены твоим преподавателем</div>
         ${packs.map(p => `
             <div class="pack-card" onclick="openPack(${p.id})">
                 <div class="pack-card-header">
