@@ -96,23 +96,6 @@ body::before {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 18px;
 }
-.splash-error {
-    display: none;
-    flex-direction: column; align-items: center; gap: 12px;
-    position: absolute; bottom: 60px;
-    animation: fadeIn 0.4s ease forwards;
-}
-.splash-error-text {
-    font-size: 14px; color: var(--muted); text-align: center;
-}
-.splash-error-btn {
-    background: var(--accent-dim); color: var(--accent);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    border-radius: 12px; padding: 8px 24px;
-    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: background 0.2s;
-}
-.splash-error-btn:active { background: rgba(168, 85, 247, 0.25); }
 .splash-pill {
     font-size: 76px;
     animation: splashBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards;
@@ -712,10 +695,6 @@ body::before {
     <div class="splash-pill">💊</div>
     <div class="splash-name">WordPill</div>
     <div class="splash-sub">Учи слова. Каждый день.</div>
-    <div id="splashError" class="splash-error">
-        <div class="splash-error-text">Нет соединения. Попробуй позже.</div>
-        <button class="splash-error-btn" onclick="location.reload()">Обновить</button>
-    </div>
 </div>
 
 <!-- ============================================================
@@ -904,31 +883,6 @@ body::before {
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
 const DAILY_GOAL   = 10;
-const ADMIN_TG_ID  = 291442252; // твой Telegram ID для алертов
-
-// ── ERROR ALERTING ────────────────────────────────────────────────────────
-async function alertAdmin(message) {
-    try {
-        const BOT_TOKEN = '8657992745:AAFpeEwFxqYvg705lkLEkt4RT4MCgLUTWuE';
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: ADMIN_TG_ID,
-                text: `⚠️ WordPill error\n\n${message}\n\nUser: ${me?.id || 'unknown'} (@${me?.username || '?'})`,
-                parse_mode: 'HTML'
-            })
-        });
-    } catch (_) { /* не ломаем приложение если алерт не ушёл */ }
-}
-
-// Глобальный перехватчик необработанных ошибок
-window.addEventListener('unhandledrejection', e => {
-    const msg = e.reason?.message || String(e.reason);
-    // Игнорируем мелкие сетевые ошибки которые не влияют на работу
-    if (msg.includes('Failed to fetch') && !msg.includes('supabase')) return;
-    alertAdmin(`Unhandled rejection: ${msg}`);
-});
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -983,44 +937,34 @@ function getCatLabel(key) { return allCatList().find(c => c.key === key)?.label 
 async function init() {
     if (tg) { tg.ready(); tg.expand(); }
 
-    const startTime = Date.now();
+    const u = tg?.initDataUnsafe?.user;
+    me = u?.id
+        ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
+        : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
+
     let isNew = false;
-
     try {
-        await Promise.race([
-            // Основная загрузка
-            (async () => {
-                const u = tg?.initDataUnsafe?.user;
-                me = u?.id
-                    ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
-                    : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
-                isNew = await upsertUser();
-                await loadWords();
-                if (!words.length) await migrate();
-            })(),
-            // Таймаут 10 секунд
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
-        ]);
-
-        // Держим сплэш минимум 1900ms для плавного старта
-        const elapsed = Date.now() - startTime;
-        if (elapsed < 1900) await delay(1900 - elapsed);
-
-        document.getElementById('splash').style.display = 'none';
-
-        if (isNew && !words.length) {
-            document.getElementById('onboarding').classList.add('visible');
-        } else {
-            showApp();
-        }
-
-        document.getElementById('inputWord').addEventListener('input', onWordInput);
-
+        isNew = await upsertUser();
+        await loadWords();
+        if (!words.length) await migrate();
     } catch (e) {
-        // Сервер не ответил за 10 секунд или произошла ошибка
-        document.getElementById('splashError').style.display = 'flex';
-        alertAdmin(`Init failed: ${e.message || e}`);
+        console.error('init error', e);
+        await delay(1900);
+        document.getElementById('splash').style.display = 'none';
+        showToast('Нет соединения. Попробуй перезапустить.');
+        return;
     }
+
+    await delay(1900);
+    document.getElementById('splash').style.display = 'none';
+
+    if (isNew && !words.length) {
+        document.getElementById('onboarding').classList.add('visible');
+    } else {
+        showApp();
+    }
+
+    document.getElementById('inputWord').addEventListener('input', onWordInput);
 }
 
 function showApp() {
@@ -1037,14 +981,18 @@ function finishOnboarding() { showApp(); }
 // ── USER / STREAK ─────────────────────────────────────────────────────────
 async function upsertUser() {
     const today = todayStr();
-    const { data: ex } = await db.from('users').select('*').eq('id', me.id).single();
+    const { data: ex, error: fetchErr } = await db.from('users').select('*').eq('id', me.id).single();
+
+    // PGRST116 = row not found, это нормально — значит новый пользователь
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
 
     if (!ex) {
-        await db.from('users').insert({
+        const { error: insertErr } = await db.from('users').insert({
             id: me.id, username: me.username, first_name: me.first_name,
             last_name: me.last_name, chat_id: me.chat_id,
             streak_days: 1, last_study_date: today, custom_categories: []
         });
+        if (insertErr) throw insertErr;
         me.streak_days = 1; customCats = []; return true;
     }
 
@@ -1054,10 +1002,12 @@ async function upsertUser() {
     if (ex.last_study_date === yStr)    streak++;
     else if (ex.last_study_date !== today) streak = 1;
 
-    await db.from('users').update({
+    // update некритичный — если упадёт, просто логируем
+    const { error: updateErr } = await db.from('users').update({
         username: me.username, first_name: me.first_name, chat_id: me.chat_id,
         last_seen: new Date().toISOString(), streak_days: streak, last_study_date: today
     }).eq('id', me.id);
+    if (updateErr) console.warn('upsertUser update failed', updateErr);
 
     me.streak_days = streak;
     customCats = ex.custom_categories || [];
@@ -1091,7 +1041,8 @@ async function migrate() {
 
 // ── WORDS — LOAD ──────────────────────────────────────────────────────────
 async function loadWords() {
-    const { data } = await db.from('words').select('*').eq('user_id', me.id).order('created_at', { ascending: false });
+    const { data, error } = await db.from('words').select('*').eq('user_id', me.id).order('created_at', { ascending: false });
+    if (error) throw error;
     words = data || [];
 }
 
@@ -1246,10 +1197,11 @@ async function submitWord() {
     btn.disabled = true; btn.textContent = editId ? 'Сохраняю...' : 'Добавляю...';
 
     if (editId) {
-        await db.from('words').update({ word, translation, category }).eq('id', editId);
+        const { error } = await db.from('words').update({ word, translation, category }).eq('id', editId);
+        btn.disabled = false;
+        if (error) { showToast('Ошибка сохранения'); return; }
         const idx = words.findIndex(w => w.id === editId);
         if (idx >= 0) words[idx] = { ...words[idx], word, translation, category };
-        btn.disabled = false;
         cancelEdit(); renderWords(); showToast('Сохранено');
     } else {
         const { data, error } = await db.from('words').insert({
@@ -1296,7 +1248,8 @@ function cancelEdit() {
 }
 
 async function deleteWord(id) {
-    await db.from('words').delete().eq('id', id);
+    const { error } = await db.from('words').delete().eq('id', id);
+    if (error) { showToast('Ошибка удаления'); return; }
     words = words.filter(w => w.id !== id);
     updateHeader(); renderWords(); showToast('Слово удалено');
 }
@@ -1463,7 +1416,9 @@ async function answer(q) {
     const upd = sm2(c, q);
     const tc = (c.times_correct||0) + (q===1?1:0);
     const tw = (c.times_wrong  ||0) + (q===0?1:0);
-    await db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id);
+    // fire-and-forget — не блокируем UI ожиданием DB
+    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id)
+        .then(({ error }) => { if (error) console.warn('answer update failed', error); });
     const i = words.findIndex(w => w.id === c.id);
     if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
     session.idx++; session.shown = false; renderCard();
@@ -1508,7 +1463,9 @@ async function answerQuiz(btn, chosen, correct, wordId) {
     const upd  = sm2(card, isCorrect ? 1 : 0);
     const tc = (card.times_correct||0) + (isCorrect?1:0);
     const tw = (card.times_wrong  ||0) + (!isCorrect?1:0);
-    await db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', card.id);
+    // fire-and-forget — не блокируем UI ожиданием DB
+    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', card.id)
+        .then(({ error }) => { if (error) console.warn('answerQuiz update failed', error); });
     const i = words.findIndex(w => w.id === card.id);
     if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
 
@@ -1540,10 +1497,11 @@ function showResults() {
 }
 
 async function saveSession() {
-    await db.from('study_sessions').insert({
+    const { error } = await db.from('study_sessions').insert({
         user_id: me.id, finished_at: new Date().toISOString(),
         cards_total: session.cards.length, cards_correct: session.ok
     });
+    if (error) console.warn('saveSession failed', error);
     incrementGoal(session.ok);
     updateHeader(); renderWords();
 }
@@ -1553,7 +1511,8 @@ async function renderLibrary() {
     const el = document.getElementById('libraryContent');
 
     if (!packs.length) {
-        const { data } = await db.from('packs').select('*, pack_words(count)').order('id');
+        const { data, error } = await db.from('packs').select('*, pack_words(count)').order('id');
+        if (error) { el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px">Не удалось загрузить библиотеку</div>`; return; }
         packs = data || [];
     }
 
@@ -1612,7 +1571,7 @@ async function addFromPack(pwId, word, translation, category) {
     addedWords.add(word.toLowerCase());
     const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
     if (btn) { btn.classList.add('added'); btn.disabled = true; btn.innerHTML = ICON.check; }
-    updateHeader(); renderGoalBar(); renderWords();
+    updateHeader();
     showToast(`✓ ${word} добавлено`);
 }
 
@@ -1625,7 +1584,7 @@ async function addAllFromPack(packId) {
     if (error) { showToast('Ошибка добавления'); return; }
     words = [...data, ...words];
     toAdd.forEach(w => addedWords.add(w.word.toLowerCase()));
-    updateHeader(); renderGoalBar(); renderWords();
+    updateHeader();
     openPack(packId);
     showToast(`Добавлено ${data.length} слов!`);
 }
@@ -1638,7 +1597,9 @@ async function renderStats() {
     const tc = words.reduce((a, w) => a + (w.times_correct||0), 0);
     const tw = words.reduce((a, w) => a + (w.times_wrong  ||0), 0);
     const rate = tc + tw ? Math.round(tc / (tc + tw) * 100) : 0;
-    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5);
+    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5)
+        .then(r => r)
+        .catch(() => ({ data: [] }));
 
     area.innerHTML = `
         <div class="stats-grid">
@@ -1780,7 +1741,6 @@ function showScreen(name) {
     s.style.display = 'block'; void s.offsetWidth; s.classList.add('active');
     const nb = document.getElementById(`nav-${name}`); if (nb) nb.classList.add('active');
     document.getElementById('fabBtn').style.display = name === 'words' ? 'flex' : 'none';
-    if (name === 'words')   { renderWords(); window.scrollTo(0, 0); }
     if (name === 'cards')   initCards();
     if (name === 'stats')   renderStats();
     if (name === 'library') renderLibrary();
