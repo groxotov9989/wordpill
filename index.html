@@ -96,6 +96,23 @@ body::before {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 18px;
 }
+.splash-error {
+    display: none;
+    flex-direction: column; align-items: center; gap: 12px;
+    position: absolute; bottom: 60px;
+    animation: fadeIn 0.4s ease forwards;
+}
+.splash-error-text {
+    font-size: 14px; color: var(--muted); text-align: center;
+}
+.splash-error-btn {
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 12px; padding: 8px 24px;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+}
+.splash-error-btn:active { background: rgba(168, 85, 247, 0.25); }
 .splash-pill {
     font-size: 76px;
     animation: splashBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards;
@@ -695,6 +712,10 @@ body::before {
     <div class="splash-pill">💊</div>
     <div class="splash-name">WordPill</div>
     <div class="splash-sub">Учи слова. Каждый день.</div>
+    <div id="splashError" class="splash-error">
+        <div class="splash-error-text">Нет соединения. Попробуй позже.</div>
+        <button class="splash-error-btn" onclick="location.reload()">Обновить</button>
+    </div>
 </div>
 
 <!-- ============================================================
@@ -883,6 +904,31 @@ body::before {
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
 const DAILY_GOAL   = 10;
+const ADMIN_TG_ID  = 291442252; // твой Telegram ID для алертов
+
+// ── ERROR ALERTING ────────────────────────────────────────────────────────
+async function alertAdmin(message) {
+    try {
+        const BOT_TOKEN = '8657992745:AAFpeEwFxqYvg705lkLEkt4RT4MCgLUTWuE';
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: ADMIN_TG_ID,
+                text: `⚠️ WordPill error\n\n${message}\n\nUser: ${me?.id || 'unknown'} (@${me?.username || '?'})`,
+                parse_mode: 'HTML'
+            })
+        });
+    } catch (_) { /* не ломаем приложение если алерт не ушёл */ }
+}
+
+// Глобальный перехватчик необработанных ошибок
+window.addEventListener('unhandledrejection', e => {
+    const msg = e.reason?.message || String(e.reason);
+    // Игнорируем мелкие сетевые ошибки которые не влияют на работу
+    if (msg.includes('Failed to fetch') && !msg.includes('supabase')) return;
+    alertAdmin(`Unhandled rejection: ${msg}`);
+});
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -937,25 +983,44 @@ function getCatLabel(key) { return allCatList().find(c => c.key === key)?.label 
 async function init() {
     if (tg) { tg.ready(); tg.expand(); }
 
-    const u = tg?.initDataUnsafe?.user;
-    me = u?.id
-        ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
-        : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
+    const startTime = Date.now();
+    let isNew = false;
 
-    const isNew = await upsertUser();
-    await loadWords();
-    if (!words.length) await migrate();
+    try {
+        await Promise.race([
+            // Основная загрузка
+            (async () => {
+                const u = tg?.initDataUnsafe?.user;
+                me = u?.id
+                    ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
+                    : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
+                isNew = await upsertUser();
+                await loadWords();
+                if (!words.length) await migrate();
+            })(),
+            // Таймаут 10 секунд
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+        ]);
 
-    await delay(1900);
-    document.getElementById('splash').style.display = 'none';
+        // Держим сплэш минимум 1900ms для плавного старта
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1900) await delay(1900 - elapsed);
 
-    if (isNew && !words.length) {
-        document.getElementById('onboarding').classList.add('visible');
-    } else {
-        showApp();
+        document.getElementById('splash').style.display = 'none';
+
+        if (isNew && !words.length) {
+            document.getElementById('onboarding').classList.add('visible');
+        } else {
+            showApp();
+        }
+
+        document.getElementById('inputWord').addEventListener('input', onWordInput);
+
+    } catch (e) {
+        // Сервер не ответил за 10 секунд или произошла ошибка
+        document.getElementById('splashError').style.display = 'flex';
+        alertAdmin(`Init failed: ${e.message || e}`);
     }
-
-    document.getElementById('inputWord').addEventListener('input', onWordInput);
 }
 
 function showApp() {
@@ -1547,7 +1612,7 @@ async function addFromPack(pwId, word, translation, category) {
     addedWords.add(word.toLowerCase());
     const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
     if (btn) { btn.classList.add('added'); btn.disabled = true; btn.innerHTML = ICON.check; }
-    updateHeader();
+    updateHeader(); renderGoalBar(); renderWords();
     showToast(`✓ ${word} добавлено`);
 }
 
@@ -1560,7 +1625,7 @@ async function addAllFromPack(packId) {
     if (error) { showToast('Ошибка добавления'); return; }
     words = [...data, ...words];
     toAdd.forEach(w => addedWords.add(w.word.toLowerCase()));
-    updateHeader();
+    updateHeader(); renderGoalBar(); renderWords();
     openPack(packId);
     showToast(`Добавлено ${data.length} слов!`);
 }
@@ -1715,6 +1780,7 @@ function showScreen(name) {
     s.style.display = 'block'; void s.offsetWidth; s.classList.add('active');
     const nb = document.getElementById(`nav-${name}`); if (nb) nb.classList.add('active');
     document.getElementById('fabBtn').style.display = name === 'words' ? 'flex' : 'none';
+    if (name === 'words')   renderWords();
     if (name === 'cards')   initCards();
     if (name === 'stats')   renderStats();
     if (name === 'library') renderLibrary();
