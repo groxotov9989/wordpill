@@ -628,29 +628,38 @@ function showError() {
 
 // ─── DATA ───
 async function loadStudents() {
-  // Get teacher's students
-  const { data: links } = await sb.from('teacher_students')
+  const { data: links, error: linksErr } = await sb.from('teacher_students')
     .select('user_id').eq('teacher_id', teacher.id);
 
+  if (linksErr) { console.error('loadStudents links error', linksErr); students = []; return; }
   if (!links || links.length === 0) { students = []; return; }
+
   const ids = links.map(l => l.user_id);
 
-  // Get user info
-  const { data: users } = await sb.from('users').select('*').in('id', ids);
+  // Последние 90 дней для сессий — не тащим всю историю с начала времён
+  const since = new Date();
+  since.setDate(since.getDate() - 90);
+  const sinceStr = since.toISOString();
 
-  // Get word counts
-  const { data: wordCounts } = await sb.from('words')
-    .select('user_id').in('user_id', ids);
+  // Три запроса параллельно — в 3× быстрее чем последовательно
+  const [usersRes, wordCountsRes, sessionsRes] = await Promise.all([
+    sb.from('users').select('*').in('id', ids),
+    sb.from('words').select('user_id').in('user_id', ids),
+    sb.from('study_sessions')
+      .select('user_id, cards_correct, cards_total')
+      .in('user_id', ids)
+      .gte('started_at', sinceStr),
+  ]);
 
-  // Get study sessions
-  const { data: sessions } = await sb.from('study_sessions')
-    .select('user_id, cards_correct, cards_total').in('user_id', ids);
+  const users      = usersRes.data      || [];
+  const wordCounts = wordCountsRes.data  || [];
+  const sessions   = sessionsRes.data    || [];
 
-  students = (users || []).map(u => {
-    const wc = (wordCounts || []).filter(w => w.user_id === u.id).length;
-    const sess = (sessions || []).filter(s => s.user_id === u.id);
+  students = users.map(u => {
+    const wc = wordCounts.filter(w => w.user_id === u.id).length;
+    const sess = sessions.filter(s => s.user_id === u.id);
     const totalCorrect = sess.reduce((a, s) => a + (s.cards_correct || 0), 0);
-    const totalCards = sess.reduce((a, s) => a + (s.cards_total || 0), 0);
+    const totalCards   = sess.reduce((a, s) => a + (s.cards_total   || 0), 0);
     const pct = totalCards > 0 ? Math.round(totalCorrect / totalCards * 100) : 0;
     return { ...u, wordCount: wc, accuracy: pct, totalCards };
   });
@@ -714,6 +723,7 @@ function renderStudents() {
         <div class="${streakClass} streak-cell">${streakText}</div>
         <div class="words-cell">${s.wordCount}<div class="words-sub">слов</div></div>
         <div class="assign-btn-cell" style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="openAssignToUser(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">Пак →</button>
           <button class="btn btn-danger-ghost btn-sm" onclick="removeStudent(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">✕</button>
         </div>
       </div>
