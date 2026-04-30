@@ -885,7 +885,15 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const DAILY_GOAL   = 10;
 
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+let db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Pack category → DEFAULT_CATS key normalisation
+const PACK_CAT_MAP = {
+    anatomy: 'anatomy', symptoms: 'symptoms', lab: 'lab',
+    general: 'general', pharma: 'pharma', obstetrics: 'obstetrics',
+    procedures: 'general',
+};
+function normalizeCat(cat) { return PACK_CAT_MAP[cat] || 'general'; }
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────
 const DEFAULT_CATS = [
@@ -943,10 +951,28 @@ async function init() {
         ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
         : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
 
+    // Obtain a signed JWT from the auth edge function so RLS policies work
+    if (tg?.initData) {
+        try {
+            const r = await fetch(`${SUPABASE_URL}/functions/v1/telegram-auth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: tg.initData })
+            });
+            if (r.ok) {
+                const { token } = await r.json();
+                db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    global: { headers: { Authorization: `Bearer ${token}` } }
+                });
+            }
+        } catch (e) { console.warn('telegram-auth failed, using anon', e); }
+    }
+
     let isNew = false;
     try {
         isNew = await upsertUser();
         await loadWords();
+        await drainAnswerQueue();
         if (!words.length) await migrate();
     } catch (e) {
         console.error('init error', e);
@@ -1304,15 +1330,23 @@ function onWordInput() {
     transTimer = setTimeout(() => fetchTranslation(val), 700);
 }
 async function fetchTranslation(word) {
+    const cacheKey = 'tr_' + word.toLowerCase();
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) { showTranslationHint(cached); return; }
     try {
         const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ru`);
+        if (!r.ok) return;
         const d = await r.json();
         const tr = d?.responseData?.translatedText;
         if (tr && tr.toLowerCase() !== word.toLowerCase()) {
-            document.getElementById('hintText').textContent = tr;
-            document.getElementById('translateHint').style.display = 'block';
+            localStorage.setItem(cacheKey, tr);
+            showTranslationHint(tr);
         }
     } catch {}
+}
+function showTranslationHint(text) {
+    document.getElementById('hintText').textContent = text;
+    document.getElementById('translateHint').style.display = 'block';
 }
 function acceptHint() {
     document.getElementById('inputTranslation').value = document.getElementById('hintText').textContent;
@@ -1417,10 +1451,32 @@ function applyAnswer(card, quality) {
     const upd = sm2(card, quality);
     const tc = (card.times_correct||0) + (quality===1?1:0);
     const tw = (card.times_wrong  ||0) + (quality===0?1:0);
-    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', card.id)
-        .then(({ error }) => { if (error) console.warn('applyAnswer failed', error); });
+    // Update local state immediately for snappy UX
     const i = words.findIndex(w => w.id === card.id);
     if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
+    // Persist; on failure queue for retry on next launch
+    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', card.id)
+        .then(({ error }) => {
+            if (error) {
+                const q = JSON.parse(localStorage.getItem('answerQueue') || '[]');
+                q.push({ id: card.id, upd, tc, tw });
+                localStorage.setItem('answerQueue', JSON.stringify(q));
+                showToast('⚠️ Прогресс не сохранён — повторим при следующем запуске');
+            }
+        });
+}
+
+async function drainAnswerQueue() {
+    const q = JSON.parse(localStorage.getItem('answerQueue') || '[]');
+    if (!q.length) return;
+    const remaining = [];
+    for (const item of q) {
+        const { error } = await db.from('words').update({
+            ...item.upd, times_correct: item.tc, times_wrong: item.tw
+        }).eq('id', item.id);
+        if (error) remaining.push(item);
+    }
+    localStorage.setItem('answerQueue', JSON.stringify(remaining));
 }
 
 async function answer(q) {
@@ -1564,7 +1620,7 @@ function renderPackWord(w) {
 async function addFromPack(pwId, word, translation, category) {
     if (addedWords.has(word.toLowerCase())) return;
     const { data, error } = await db.from('words').insert({
-        user_id: me.id, word, translation, category, next_review: new Date().toISOString()
+        user_id: me.id, word, translation, category: normalizeCat(category), next_review: new Date().toISOString()
     }).select().single();
     if (error) { showToast('Ошибка добавления'); return; }
     words.unshift(data);
@@ -1579,7 +1635,7 @@ async function addFromPack(pwId, word, translation, category) {
 async function addAllFromPack(packId) {
     const toAdd = currentPackWords.filter(w => !addedWords.has(w.word.toLowerCase()));
     if (!toAdd.length) { showToast('Все слова уже добавлены'); return; }
-    const rows = toAdd.map(w => ({ user_id: me.id, word: w.word, translation: w.translation, category: w.category, next_review: new Date().toISOString() }));
+    const rows = toAdd.map(w => ({ user_id: me.id, word: w.word, translation: w.translation, category: normalizeCat(w.category), next_review: new Date().toISOString() }));
     const { data, error } = await db.from('words').insert(rows).select();
     if (error) { showToast('Ошибка добавления'); return; }
     words = [...data, ...words];

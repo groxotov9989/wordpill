@@ -80,79 +80,62 @@ body::before { content:''; position:fixed; top:0; left:50%; transform:translateX
 <div id="content"><div class="loading">Загружаем данные...</div></div>
 
 <script>
+// Token validation is now server-side — no secret in this file
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const ADMIN_TOKEN = 'wp-admin-secure-2026'; // Change to a secret value you know
 const _tok = new URLSearchParams(location.search).get('key');
-if (_tok !== ADMIN_TOKEN) {
+if (!_tok) {
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:18px;color:#787890">Доступ запрещён</div>';
     throw new Error('Unauthorized');
 }
 
-const SKIP_IDS = [999999999]; // dev user
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 async function loadData() {
     document.getElementById('content').innerHTML = '<div class="loading">Загружаем данные...</div>';
 
-    // Users with word stats
-    const { data: users } = await db.from('users').select('*').not('id', 'in', `(${SKIP_IDS.join(',')})`).order('last_seen', { ascending: false });
+    let payload;
+    try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/analytics?key=${encodeURIComponent(_tok)}`);
+        if (r.status === 401) {
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:18px;color:#787890">Доступ запрещён</div>';
+            return;
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        payload = await r.json();
+    } catch (e) {
+        document.getElementById('content').innerHTML = `<div class="loading">Ошибка загрузки: ${esc(String(e))}</div>`;
+        return;
+    }
 
-    // Words per user
-    const { data: wordStats } = await db.from('words').select('user_id, times_correct, times_wrong, interval_days');
+    const { users, wordStats, sessions, sessionCount } = payload;
 
-    // Recent sessions (display) + total count (summary card)
-    const [{ data: sessions }, { count: sessionCount }] = await Promise.all([
-        db.from('study_sessions').select('*, users(first_name, username)').not('user_id', 'in', `(${SKIP_IDS.join(',')})`).order('started_at', { ascending: false }).limit(10),
-        db.from('study_sessions').select('*', { count: 'exact', head: true }).not('user_id', 'in', `(${SKIP_IDS.join(',')})`),
-    ]);
-
-    // Calc per user
+    // Build per-user map from server-aggregated data
     const today = new Date().toISOString().split('T')[0];
     const userMap = {};
-    (wordStats || []).forEach(w => {
-        if (SKIP_IDS.includes(w.user_id)) return;
-        if (!userMap[w.user_id]) userMap[w.user_id] = { words: 0, correct: 0, wrong: 0, mastered: 0 };
-        userMap[w.user_id].words++;
-        userMap[w.user_id].correct += w.times_correct || 0;
-        userMap[w.user_id].wrong += w.times_wrong || 0;
-        const total = (w.times_correct || 0) + (w.times_wrong || 0);
-        const rate = total > 0 ? w.times_correct / total : 0;
-        if (w.interval_days >= 7 && rate >= 0.8) userMap[w.user_id].mastered++;
+    (wordStats || []).forEach(s => {
+        userMap[s.user_id] = {
+            words:    Number(s.word_count)    || 0,
+            correct:  Number(s.total_correct) || 0,
+            wrong:    Number(s.total_wrong)   || 0,
+            mastered: Number(s.mastered_count)|| 0,
+        };
     });
 
-    const totalUsers = (users || []).length;
-    const activeToday = (users || []).filter(u => u.last_study_date === today).length;
-    const totalWords = Object.values(userMap).reduce((a, u) => a + u.words, 0);
+    const totalUsers    = (users || []).length;
+    const activeToday   = (users || []).filter(u => u.last_study_date === today).length;
+    const totalWords    = (wordStats || []).reduce((a, s) => a + Number(s.word_count), 0);
     const totalSessions = sessionCount || 0;
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
 
     document.getElementById('content').innerHTML = `
-        <!-- Summary -->
         <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-val" style="color:var(--accent)">${totalUsers}</div>
-                <div class="summary-label">Учеников</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-val" style="color:var(--success)">${activeToday}</div>
-                <div class="summary-label">Активны сегодня</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-val">${totalWords}</div>
-                <div class="summary-label">Слов добавлено</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-val" style="color:var(--warning)">${totalSessions}</div>
-                <div class="summary-label">Сессий всего</div>
-            </div>
+            <div class="summary-card"><div class="summary-val" style="color:var(--accent)">${totalUsers}</div><div class="summary-label">Учеников</div></div>
+            <div class="summary-card"><div class="summary-val" style="color:var(--success)">${activeToday}</div><div class="summary-label">Активны сегодня</div></div>
+            <div class="summary-card"><div class="summary-val">${totalWords}</div><div class="summary-label">Слов добавлено</div></div>
+            <div class="summary-card"><div class="summary-val" style="color:var(--warning)">${totalSessions}</div><div class="summary-label">Сессий всего</div></div>
         </div>
 
-        <!-- Users -->
         <div class="section">
             <div class="section-title">Ученики</div>
             ${(users || []).map(u => {
@@ -162,10 +145,7 @@ async function loadData() {
                 const lastSeen = new Date(u.last_seen).toLocaleDateString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                 return `<div class="user-row">
                     <div>
-                        <div class="user-name">
-                            <span class="active-dot ${isToday ? 'dot-today' : 'dot-old'}"></span>
-                            ${esc(u.first_name)}
-                        </div>
+                        <div class="user-name"><span class="active-dot ${isToday ? 'dot-today' : 'dot-old'}"></span>${esc(u.first_name)}</div>
                         <div class="user-handle">@${esc(u.username || '—')} · ${lastSeen}</div>
                     </div>
                     <div class="user-stat purple">${s.words} слов</div>
@@ -177,7 +157,6 @@ async function loadData() {
             }).join('')}
         </div>
 
-        <!-- Recent sessions -->
         <div class="section">
             <div class="section-title">Последние сессии</div>
             <div class="sessions-list">
@@ -199,8 +178,6 @@ async function loadData() {
         <div style="text-align:center;font-size:12px;color:var(--muted)">Обновлено в ${timeStr}</div>
     `;
 }
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 loadData();
 </script>
