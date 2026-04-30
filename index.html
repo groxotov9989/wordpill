@@ -1572,6 +1572,7 @@ async function addFromPack(pwId, word, translation, category) {
     const btn = document.querySelector(`#pw-${pwId} .pack-add-btn`);
     if (btn) { btn.classList.add('added'); btn.disabled = true; btn.innerHTML = ICON.check; }
     updateHeader();
+    renderWords();
     showToast(`✓ ${word} добавлено`);
 }
 
@@ -1584,6 +1585,7 @@ async function addAllFromPack(packId) {
     words = [...data, ...words];
     toAdd.forEach(w => addedWords.add(w.word.toLowerCase()));
     updateHeader();
+    renderWords();
     openPack(packId);
     showToast(`Добавлено ${data.length} слов!`);
 }
