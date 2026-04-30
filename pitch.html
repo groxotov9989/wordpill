@@ -34,8 +34,9 @@ body {
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
-  cursor: none;
 }
+body.js-cursor { cursor: none; }
+body.js-cursor a, body.js-cursor button { cursor: none; }
 
 /* ─────────────────────────────────────────────
    CURSOR
@@ -120,7 +121,7 @@ nav {
   padding: 10px 22px;
   background: var(--p);
   color: #fff; font-weight: 600; font-size: 14px;
-  border: none; border-radius: 100px; cursor: none;
+  border: none; border-radius: 100px;
   transition: transform .2s, box-shadow .2s;
   text-decoration: none;
 }
@@ -186,7 +187,7 @@ nav {
   padding: 16px 32px;
   background: linear-gradient(135deg, var(--p), var(--p2));
   color: #fff; font-weight: 600; font-size: 16px;
-  border: none; border-radius: 16px; cursor: none; text-decoration: none;
+  border: none; border-radius: 16px; text-decoration: none;
   box-shadow: 0 8px 32px var(--glow);
   transition: transform .2s, box-shadow .2s;
 }
@@ -196,7 +197,7 @@ nav {
   padding: 16px 28px;
   color: var(--muted2); font-weight: 500; font-size: 15px;
   border: 1px solid var(--border2); border-radius: 16px;
-  cursor: none; text-decoration: none;
+  text-decoration: none;
   transition: color .2s, border-color .2s;
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--border); }
@@ -696,7 +697,7 @@ nav {
   padding: 20px 44px;
   background: linear-gradient(135deg, var(--p), var(--p2));
   color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px;
-  border: none; border-radius: 20px; cursor: none; text-decoration: none;
+  border: none; border-radius: 20px; text-decoration: none;
   box-shadow: 0 12px 48px var(--glow);
   transition: transform .2s, box-shadow .2s;
   position: relative; z-index: 2;
@@ -771,6 +772,43 @@ footer {
 .ddash-pack-count { font-size:9px; color:#787890; margin-top:2px; }
 @keyframes ddPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 @keyframes ddBar { from{width:0} }
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  nav { padding: 16px 24px; }
+  #hero { padding: 100px 24px 60px; }
+  .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+  .phone-wrap { display: none; }
+  #problem { padding: 80px 24px; }
+  .problem-grid { grid-template-columns: 1fr; }
+  #demos { padding: 60px 24px 80px; }
+  .demo-block { grid-template-columns: 1fr; gap: 40px; }
+  .demo-block.reverse { direction: ltr; }
+  #features { padding: 60px 24px 80px; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  #compare { padding: 60px 24px 80px; overflow-x: auto; }
+  #how { padding: 60px 24px 80px; }
+  .how-steps { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .how-steps::before { display: none; }
+  #cta { padding: 60px 24px 100px; }
+  footer { padding: 24px; flex-direction: column; gap: 8px; text-align: center; }
+  .divider { margin: 0 24px; }
+}
+@media (max-width: 560px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .how-steps { grid-template-columns: 1fr; }
+  .hero-h1 { font-size: clamp(36px, 9vw, 48px); }
+  .section-h2 { font-size: clamp(26px, 7vw, 40px); }
+  .compare-table th:nth-child(2), .compare-table td:nth-child(2),
+  .compare-table th:nth-child(3), .compare-table td:nth-child(3) { display: none; }
+}
+/* Disable custom cursor on touch devices */
+@media (pointer: coarse) {
+  body.js-cursor, body.js-cursor a, body.js-cursor button { cursor: auto; }
+  .cursor { display: none; }
+}
 </style>
 </head>
 <body>
@@ -1218,7 +1256,8 @@ footer {
 </footer>
 
 <script>
-// Cursor
+// Cursor (only on pointer devices)
+if (window.matchMedia('(pointer: fine)').matches) { document.body.classList.add('js-cursor'); }
 const cursor = document.getElementById('cursor');
 const dot = document.getElementById('cursorDot');
 const ring = document.getElementById('cursorRing');

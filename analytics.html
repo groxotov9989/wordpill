@@ -85,6 +85,13 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const ADMIN_TOKEN = 'wp-admin-secure-2026'; // Change to a secret value you know
+const _tok = new URLSearchParams(location.search).get('key');
+if (_tok !== ADMIN_TOKEN) {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:18px;color:#787890">Доступ запрещён</div>';
+    throw new Error('Unauthorized');
+}
+
 const SKIP_IDS = [999999999]; // dev user
 
 async function loadData() {
@@ -96,8 +103,11 @@ async function loadData() {
     // Words per user
     const { data: wordStats } = await db.from('words').select('user_id, times_correct, times_wrong, interval_days');
 
-    // Recent sessions
-    const { data: sessions } = await db.from('study_sessions').select('*, users(first_name, username)').not('user_id', 'in', `(${SKIP_IDS.join(',')})`).order('started_at', { ascending: false }).limit(10);
+    // Recent sessions (display) + total count (summary card)
+    const [{ data: sessions }, { count: sessionCount }] = await Promise.all([
+        db.from('study_sessions').select('*, users(first_name, username)').not('user_id', 'in', `(${SKIP_IDS.join(',')})`).order('started_at', { ascending: false }).limit(10),
+        db.from('study_sessions').select('*', { count: 'exact', head: true }).not('user_id', 'in', `(${SKIP_IDS.join(',')})`),
+    ]);
 
     // Calc per user
     const today = new Date().toISOString().split('T')[0];
@@ -116,7 +126,7 @@ async function loadData() {
     const totalUsers = (users || []).length;
     const activeToday = (users || []).filter(u => u.last_study_date === today).length;
     const totalWords = Object.values(userMap).reduce((a, u) => a + u.words, 0);
-    const totalSessions = (sessions || []).length;
+    const totalSessions = sessionCount || 0;
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });

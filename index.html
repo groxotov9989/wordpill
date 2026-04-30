@@ -921,8 +921,9 @@ let customCats  = [];
 let selectedCat = 'general';
 let selectedCatLabel = 'Без категории';
 let searchQuery = '';
-let packs       = [];
-let addedWords  = new Set();
+let packs            = [];
+let addedWords       = new Set();
+let currentPackWords = [];
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 function esc(s) {
@@ -1248,6 +1249,8 @@ function cancelEdit() {
 }
 
 async function deleteWord(id) {
+    const w = words.find(w => w.id === id);
+    if (!confirm(`Удалить «${w?.word}»?`)) return;
     const { error } = await db.from('words').delete().eq('id', id);
     if (error) { showToast('Ошибка удаления'); return; }
     words = words.filter(w => w.id !== id);
@@ -1264,7 +1267,7 @@ function closeCatModal() { document.getElementById('catModal').classList.remove(
 
 function renderCatList() {
     document.getElementById('catList').innerHTML = allCatList().map(c => `
-        <div class="cat-item ${c.key === selectedCat ? 'selected' : ''}" onclick="selectCat('${c.key}','${c.label.replace(/'/g, "\\'")}')">
+        <div class="cat-item ${c.key === selectedCat ? 'selected' : ''}" data-key="${esc(c.key)}" data-label="${esc(c.label)}" onclick="selectCat(this.dataset.key,this.dataset.label)">
             ${c.label}
             ${c.key === selectedCat ? ICON.check : ''}
         </div>`).join('');
@@ -1397,7 +1400,7 @@ function renderCard() {
         <div class="flashcard" onclick="reveal()">
             <div class="flashcard-cat">${getCatLabel(c.category)} · ${dir}</div>
             <div class="flashcard-word">${front}</div>
-            <button class="speak-btn" style="opacity:0.6" onclick="event.stopPropagation();speakText('${speakTxt.replace(/'/g,"\\'")}','${speakLng}')">${ICON.speak}</button>
+            <button class="speak-btn" style="opacity:0.6" data-text="${esc(speakTxt)}" data-lang="${speakLng}" onclick="event.stopPropagation();speakText(this.dataset.text,this.dataset.lang)">${ICON.speak}</button>
             ${session.shown
                 ? `<div class="flashcard-translation">${back}</div>`
                 : `<div class="flashcard-hint">${ICON.tap} Нажми, чтобы увидеть перевод</div>`}
@@ -1410,17 +1413,20 @@ function renderCard() {
 
 function reveal() { if (session.shown) return; session.shown = true; renderCard(); }
 
+function applyAnswer(card, quality) {
+    const upd = sm2(card, quality);
+    const tc = (card.times_correct||0) + (quality===1?1:0);
+    const tw = (card.times_wrong  ||0) + (quality===0?1:0);
+    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', card.id)
+        .then(({ error }) => { if (error) console.warn('applyAnswer failed', error); });
+    const i = words.findIndex(w => w.id === card.id);
+    if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
+}
+
 async function answer(q) {
     const c = session.cards[session.idx];
     if (q === 1) session.ok++; else session.bad++;
-    const upd = sm2(c, q);
-    const tc = (c.times_correct||0) + (q===1?1:0);
-    const tw = (c.times_wrong  ||0) + (q===0?1:0);
-    // fire-and-forget — не блокируем UI ожиданием DB
-    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', c.id)
-        .then(({ error }) => { if (error) console.warn('answer update failed', error); });
-    const i = words.findIndex(w => w.id === c.id);
-    if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
+    applyAnswer(c, q);
     session.idx++; session.shown = false; renderCard();
 }
 
@@ -1434,7 +1440,7 @@ function renderQuiz() {
     const question      = c.rev ? esc(c.translation) : esc(c.word);
     const correctAnswer = c.rev ? c.word : c.translation;
     const answerField   = c.rev ? 'word' : 'translation';
-    const others = words.filter(w => w.id !== c.id).sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
+    const others = words.filter(w => w.id !== c.id && w[answerField] !== correctAnswer).sort(() => Math.random()-0.5).slice(0,3).map(w => w[answerField]);
     const options = [...others, correctAnswer].sort(() => Math.random()-0.5);
 
     area.innerHTML = `
@@ -1445,7 +1451,7 @@ function renderQuiz() {
             <div class="quiz-question">${question}</div>
         </div>
         <div class="quiz-options">
-            ${options.map(opt => `<button class="quiz-option" onclick="answerQuiz(this,'${opt.replace(/'/g,"\\'")}','${correctAnswer.replace(/'/g,"\\'")}',${c.id})">${esc(opt)}</button>`).join('')}
+            ${options.map(opt => `<button class="quiz-option" data-opt="${esc(opt)}" data-correct="${esc(correctAnswer)}" data-wid="${c.id}" onclick="answerQuiz(this,this.dataset.opt,this.dataset.correct,+this.dataset.wid)">${esc(opt)}</button>`).join('')}
         </div>`;
 }
 
@@ -1460,14 +1466,7 @@ async function answerQuiz(btn, chosen, correct, wordId) {
     });
 
     const card = session.cards[session.idx];
-    const upd  = sm2(card, isCorrect ? 1 : 0);
-    const tc = (card.times_correct||0) + (isCorrect?1:0);
-    const tw = (card.times_wrong  ||0) + (!isCorrect?1:0);
-    // fire-and-forget — не блокируем UI ожиданием DB
-    db.from('words').update({ ...upd, times_correct: tc, times_wrong: tw }).eq('id', card.id)
-        .then(({ error }) => { if (error) console.warn('answerQuiz update failed', error); });
-    const i = words.findIndex(w => w.id === card.id);
-    if (i >= 0) words[i] = { ...words[i], ...upd, times_correct: tc, times_wrong: tw };
+    applyAnswer(card, isCorrect ? 1 : 0);
 
     setTimeout(() => { session.idx++; session.shown = false; renderQuiz(); }, 1200);
 }
@@ -1531,6 +1530,7 @@ async function renderLibrary() {
 
 async function openPack(packId) {
     const { data: packWords } = await db.from('pack_words').select('*').eq('pack_id', packId).order('id');
+    currentPackWords = packWords || [];
     const pack = packs.find(p => p.id === packId);
     addedWords = new Set(words.map(w => w.word.toLowerCase()));
 
@@ -1555,7 +1555,7 @@ function renderPackWord(w) {
             <div class="pack-word-en">${esc(w.word)}</div>
             <div class="pack-word-ru">${esc(w.translation)}</div>
         </div>
-        <button class="pack-add-btn ${already?'added':''}" onclick="addFromPack(${w.id},'${esc(w.word).replace(/'/g,"\\'")}','${esc(w.translation).replace(/'/g,"\\'")}','${w.category}')" ${already?'disabled':''}>
+        <button class="pack-add-btn ${already?'added':''}" data-id="${w.id}" data-word="${esc(w.word)}" data-trans="${esc(w.translation)}" data-cat="${esc(w.category)}" onclick="addFromPack(+this.dataset.id,this.dataset.word,this.dataset.trans,this.dataset.cat)" ${already?'disabled':''}>
             ${already ? ICON.check : ICON.plus}
         </button>
     </div>`;
@@ -1576,8 +1576,7 @@ async function addFromPack(pwId, word, translation, category) {
 }
 
 async function addAllFromPack(packId) {
-    const { data: packWords } = await db.from('pack_words').select('*').eq('pack_id', packId);
-    const toAdd = (packWords || []).filter(w => !addedWords.has(w.word.toLowerCase()));
+    const toAdd = currentPackWords.filter(w => !addedWords.has(w.word.toLowerCase()));
     if (!toAdd.length) { showToast('Все слова уже добавлены'); return; }
     const rows = toAdd.map(w => ({ user_id: me.id, word: w.word, translation: w.translation, category: w.category, next_review: new Date().toISOString() }));
     const { data, error } = await db.from('words').insert(rows).select();
@@ -1597,9 +1596,11 @@ async function renderStats() {
     const tc = words.reduce((a, w) => a + (w.times_correct||0), 0);
     const tw = words.reduce((a, w) => a + (w.times_wrong  ||0), 0);
     const rate = tc + tw ? Math.round(tc / (tc + tw) * 100) : 0;
-    const { data: sess } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5)
-        .then(r => r)
-        .catch(() => ({ data: [] }));
+    let sess = [];
+    try {
+        const { data } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5);
+        sess = data || [];
+    } catch {}
 
     area.innerHTML = `
         <div class="stats-grid">
@@ -1624,7 +1625,7 @@ async function renderStats() {
             <span style="font-size:32px;line-height:1">🔥</span>
             <div><div class="stat-val">${me.streak_days||0}</div><div class="stat-label">Дней подряд</div></div>
         </div>
-        ${sess?.length ? `<div class="section-title">Последние сессии</div>
+        ${sess.length ? `<div class="section-title">Последние сессии</div>
         ${sess.map(s => {
             const r = s.cards_total ? Math.round(s.cards_correct / s.cards_total * 100) : 0;
             const d = new Date(s.started_at).toLocaleDateString('ru', { day: 'numeric', month: 'short' });

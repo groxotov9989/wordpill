@@ -485,6 +485,11 @@ option { background: var(--bg3); }
       <select class="form-select" id="studentSelect"></select>
     </div>
 
+    <div id="packSelectWrap" style="display:none" class="form-group">
+      <label class="form-label">Выбери пак</label>
+      <select class="form-select" id="packSelectInModal"></select>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modalAssign')">Отмена</button>
       <button class="btn btn-primary" onclick="doAssign()">Назначить →</button>
@@ -601,6 +606,8 @@ let assignPackId = null;
 let assignScope = 'group';
 let packWordCount = {};
 
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 // ─── INIT ───
 async function init() {
   const token = new URLSearchParams(location.search).get('token');
@@ -713,8 +720,8 @@ function renderStudents() {
       <div class="student-row" id="sr-${s.id}">
         <div class="avatar ${color}">${initials}</div>
         <div>
-          <div class="student-name"><span class="status-dot ${statusClass}"></span>${s.first_name || ''} ${s.last_name || ''}</div>
-          <div class="student-handle">@${s.username || '—'}</div>
+          <div class="student-name"><span class="status-dot ${statusClass}"></span>${esc(s.first_name || '')} ${esc(s.last_name || '')}</div>
+          <div class="student-handle">@${esc(s.username || '—')}</div>
         </div>
         <div class="progress-cell">
           <div class="progress-pct">${s.accuracy}%</div>
@@ -723,8 +730,8 @@ function renderStudents() {
         <div class="${streakClass} streak-cell">${streakText}</div>
         <div class="words-cell">${s.wordCount}<div class="words-sub">слов</div></div>
         <div class="assign-btn-cell" style="display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-ghost btn-sm" onclick="openAssignToUser(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">Пак →</button>
-          <button class="btn btn-danger-ghost btn-sm" onclick="removeStudent(${s.id}, '${((s.first_name||'') + ' ' + (s.last_name||'')).trim()}')">✕</button>
+          <button class="btn btn-ghost btn-sm" data-id="${s.id}" data-name="${esc(((s.first_name||'') + ' ' + (s.last_name||'')).trim())}" onclick="openAssignToUser(+this.dataset.id, this.dataset.name)">Пак →</button>
+          <button class="btn btn-danger-ghost btn-sm" data-id="${s.id}" data-name="${esc(((s.first_name||'') + ' ' + (s.last_name||'')).trim())}" onclick="removeStudent(+this.dataset.id, this.dataset.name)">✕</button>
         </div>
       </div>
     `;
@@ -748,7 +755,7 @@ function renderPacks() {
           <div class="pack-count">${count} слов${isOwn ? ' · Мой пак' : ''}</div>
           <div class="pack-actions">
             <button class="btn btn-ghost btn-sm" onclick="openEditPack(${p.id})">Редактировать</button>
-            <button class="btn btn-primary btn-sm" onclick="openAssign(${p.id}, '${p.title.replace(/'/g,"\\'")}')">Назначить</button>
+            <button class="btn btn-primary btn-sm" data-id="${p.id}" data-title="${esc(p.title)}" onclick="openAssign(+this.dataset.id, this.dataset.title)">Назначить</button>
           </div>
         </div>
       </div>
@@ -761,24 +768,23 @@ function openAssign(packId, packTitle) {
   assignPackId = packId;
   assignScope = 'group';
   document.getElementById('assignPackName').textContent = `Пак: "${packTitle}"`;
+  document.getElementById('packSelectWrap').style.display = 'none';
   selectScope('group');
   populateStudentSelect();
   openModal('modalAssign');
 }
 
 function openAssignToUser(userId, userName) {
-  // Open assign modal pre-set to user scope for specific student
+  assignPackId = null;
   assignScope = 'user';
-  assignPackId = null; // will pick from select
   selectScope('user');
-  // Populate pack select instead... for simplicity open full assign
+  populateStudentSelect();
+  document.getElementById('studentSelect').value = userId;
+  const packSel = document.getElementById('packSelectInModal');
+  packSel.innerHTML = packs.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('');
+  document.getElementById('packSelectWrap').style.display = 'block';
+  document.getElementById('assignPackName').textContent = `Назначить пак ученику: ${userName}`;
   openModal('modalAssign');
-  document.getElementById('assignPackName').textContent = `Назначить пак для: ${userName.trim()}`;
-  // Pre-select this student
-  setTimeout(() => {
-    const sel = document.getElementById('studentSelect');
-    if (sel) sel.value = userId;
-  }, 50);
 }
 
 function selectScope(scope) {
@@ -797,9 +803,10 @@ function populateStudentSelect() {
 }
 
 async function doAssign() {
-  if (!assignPackId) { toast('❗', 'Сначала выбери пак'); return; }
+  const packId = assignPackId || parseInt(document.getElementById('packSelectInModal').value);
+  if (!packId) { toast('❗', 'Сначала выбери пак'); return; }
   const row = {
-    pack_id: assignPackId,
+    pack_id: packId,
     teacher_id: teacher.id,
     scope: assignScope,
     user_id: assignScope === 'user' ? parseInt(document.getElementById('studentSelect').value) : null,
@@ -884,6 +891,10 @@ function toast(icon, msg) {
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
+// Close modals on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(el => el.classList.remove('open'));
+});
 
 // ─── STUDENT MANAGEMENT ───
 let allUsers = [];
@@ -908,17 +919,19 @@ async function openAddStudent() {
   renderSearchResults(allUsers);
 }
 
+function filterUsers(users, query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return users;
+  return users.filter(u =>
+    (u.first_name || '').toLowerCase().includes(q) ||
+    (u.last_name  || '').toLowerCase().includes(q) ||
+    (u.username   || '').toLowerCase().includes(q));
+}
+
 function searchStudents() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
-    const q = document.getElementById('studentSearchInput').value.trim().toLowerCase();
-    const filtered = q
-      ? allUsers.filter(u =>
-          (u.first_name || '').toLowerCase().includes(q) ||
-          (u.last_name  || '').toLowerCase().includes(q) ||
-          (u.username   || '').toLowerCase().includes(q))
-      : allUsers;
-    renderSearchResults(filtered);
+    renderSearchResults(filterUsers(allUsers, document.getElementById('studentSearchInput').value));
   }, 200);
 }
 
@@ -938,8 +951,8 @@ function renderSearchResults(users) {
       <div style="display:flex;align-items:center;justify-content:space-between;
         background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:12px 16px;">
         <div>
-          <div style="font-size:14px;font-weight:600">${name}</div>
-          <div style="font-size:11px;color:var(--muted)">@${u.username || '—'}</div>
+          <div style="font-size:14px;font-weight:600">${esc(name)}</div>
+          <div style="font-size:11px;color:var(--muted)">@${esc(u.username || '—')}</div>
         </div>
         ${inGroup
           ? `<span style="font-size:11px;color:var(--success);font-weight:700">✓ В группе</span>`
@@ -960,12 +973,7 @@ async function addStudentToGroup(userId) {
   renderStudents();
   renderStats();
   // Update search UI
-  renderSearchResults(allUsers.filter(u => {
-    const q = document.getElementById('studentSearchInput').value.trim().toLowerCase();
-    return !q || (u.first_name||'').toLowerCase().includes(q) ||
-      (u.last_name||'').toLowerCase().includes(q) ||
-      (u.username||'').toLowerCase().includes(q);
-  }));
+  renderSearchResults(filterUsers(allUsers, document.getElementById('studentSearchInput').value));
   const user = allUsers.find(u => u.id === userId);
   const name = user ? `${user.first_name||''} ${user.last_name||''}`.trim() : 'Ученик';
   toast('✅', `${name} добавлен в группу`);
@@ -1014,8 +1022,8 @@ function addEditWordRow(wordId = null, en = '', ru = '') {
   div.className = 'word-row';
   div.dataset.wordId = wordId || '';
   div.innerHTML = `
-    <input type="text" class="form-input word-en" placeholder="Auscultation" value="${en}">
-    <input type="text" class="form-input word-ru" placeholder="Аускультация" value="${ru}">
+    <input type="text" class="form-input word-en" placeholder="Auscultation" value="${esc(en)}">
+    <input type="text" class="form-input word-ru" placeholder="Аускультация" value="${esc(ru)}">
     <button class="word-remove" onclick="removeEditWordRow(this, ${wordId || 'null'})">−</button>
   `;
   document.getElementById('editWordRows').appendChild(div);
@@ -1054,9 +1062,11 @@ async function doSavePack() {
     const wid = row.dataset.wordId ? parseInt(row.dataset.wordId) : null;
 
     if (wid) {
-      await sb.from('pack_words').update({ word: en, translation: ru }).eq('id', wid);
+      const { error } = await sb.from('pack_words').update({ word: en, translation: ru }).eq('id', wid);
+      if (error) console.warn('word update failed', wid, error);
     } else {
-      await sb.from('pack_words').insert({ pack_id: editPackId, word: en, translation: ru, category: 'general' });
+      const { error } = await sb.from('pack_words').insert({ pack_id: editPackId, word: en, translation: ru, category: 'general' });
+      if (error) console.warn('word insert failed', error);
     }
   }
 
