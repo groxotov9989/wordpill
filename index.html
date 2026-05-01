@@ -882,7 +882,7 @@ body::before {
 // ── CONFIG ────────────────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
-const DAILY_GOAL   = 10;
+let dailyGoal = parseInt(localStorage.getItem('daily_goal') || '10');
 
 const { createClient } = supabase;
 let db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1013,7 +1013,7 @@ function showApp() {
     updateHeader();
     renderGoalBar();
     renderWords();
-    if (!localStorage.getItem('tut_done')) setTimeout(openTutorial, 600);
+    if (!(me?.tutorial_completed || localStorage.getItem('tut_done'))) setTimeout(openTutorial, 600);
 }
 function finishOnboarding() { showApp(); }
 
@@ -1035,11 +1035,18 @@ async function upsertUser() {
             // 23505 = unique_violation: another tab won the race, fetch their row
             if (insertErr.code === '23505') {
                 const { data: winner } = await db.from('users').select('*').eq('id', me.id).single();
-                if (winner) { me.streak_days = winner.streak_days || 1; customCats = winner.custom_categories || []; return false; }
+                if (winner) {
+                    me.streak_days = winner.streak_days || 1;
+                    me.tutorial_completed = winner.tutorial_completed || false;
+                    customCats = winner.custom_categories || [];
+                    dailyGoal = winner.daily_goal || 10;
+                    localStorage.setItem('daily_goal', dailyGoal);
+                    return false;
+                }
             }
             throw insertErr;
         }
-        me.streak_days = 1; customCats = []; return true;
+        me.streak_days = 1; me.tutorial_completed = false; customCats = []; dailyGoal = 10; return true;
     }
 
     const yest = new Date(); yest.setDate(yest.getDate() - 1);
@@ -1056,7 +1063,10 @@ async function upsertUser() {
     if (updateErr) console.warn('upsertUser update failed', updateErr);
 
     me.streak_days = streak;
+    me.tutorial_completed = ex.tutorial_completed || false;
     customCats = ex.custom_categories || [];
+    dailyGoal = ex.daily_goal || 10;
+    localStorage.setItem('daily_goal', dailyGoal);
     return false;
 }
 
@@ -1115,14 +1125,14 @@ function wordStatus(w) {
 function renderGoalBar() {
     const el = document.getElementById('goalBar');
     const reviewed = parseInt(localStorage.getItem('goal_' + todayStr()) || '0');
-    const pct = Math.min(100, Math.round(reviewed / DAILY_GOAL * 100));
-    const done = reviewed >= DAILY_GOAL;
+    const pct = Math.min(100, Math.round(reviewed / dailyGoal * 100));
+    const done = reviewed >= dailyGoal;
 
     el.innerHTML = `<div class="goal-bar">
         <div class="goal-bar-info">
             <div class="goal-bar-title">
                 <span>Цель на сегодня</span>
-                <span class="goal-bar-count">${reviewed}/${DAILY_GOAL}</span>
+                <span class="goal-bar-count">${reviewed}/${dailyGoal}</span>
             </div>
             <div class="goal-progress">
                 <div class="goal-progress-fill" style="width:${pct}%"></div>
@@ -1136,6 +1146,14 @@ function incrementGoal(count) {
     const key = 'goal_' + todayStr();
     const cur = parseInt(localStorage.getItem(key) || '0');
     localStorage.setItem(key, cur + count);
+    renderGoalBar();
+}
+
+function saveDailyGoal(value) {
+    dailyGoal = value;
+    localStorage.setItem('daily_goal', value);
+    db.from('users').update({ daily_goal: value }).eq('id', me.id)
+        .then(({ error }) => { if (error) console.warn('daily_goal save failed', error); });
     renderGoalBar();
 }
 
@@ -1792,6 +1810,11 @@ function openTutorial() {
 function closeTutorial() {
     document.getElementById('tutorial').classList.remove('visible');
     localStorage.setItem('tut_done', '1');
+    if (me) {
+        me.tutorial_completed = true;
+        db.from('users').update({ tutorial_completed: true }).eq('id', me.id)
+            .then(({ error }) => { if (error) console.warn('tutorial_completed save failed', error); });
+    }
 }
 function tutNext() {
     if (tutStep < TUT_STEPS.length - 1) { tutStep++; renderTutStep(); }
