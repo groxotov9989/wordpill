@@ -613,6 +613,7 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 async function init() {
   const token = new URLSearchParams(location.search).get('token');
   if (!token) { showError(); return; }
+  history.replaceState({}, '', location.pathname);
 
   // Validate token server-side and get a signed JWT with teacher_id claim
   let jwt;
@@ -879,7 +880,11 @@ async function doCreatePack() {
   // Insert words
   const wordRows = words.map(w => ({ ...w, pack_id: pack.id }));
   const { error: we } = await sb.from('pack_words').insert(wordRows);
-  if (we) { toast('❌', 'Ошибка добавления слов'); return; }
+  if (we) {
+    await sb.from('packs').delete().eq('id', pack.id);
+    toast('❌', 'Ошибка добавления слов');
+    return;
+  }
 
   closeModal('modalCreatePack');
   toast('✅', `Пак "${title}" создан (${words.length} слов)`);

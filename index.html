@@ -932,6 +932,11 @@ let searchQuery = '';
 let packs            = [];
 let addedWords       = new Set();
 let currentPackWords = [];
+let packCache        = new Map(); // M3: per-pack word cache
+let packsLoadedAt    = 0;         // M9: pack list TTL (ms)
+let statsCache       = null;      // M4: last sessions query result
+let statsCacheTime   = 0;
+let translRateLimited = false;    // M1: shown rate-limit toast this session
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 function esc(s) {
@@ -947,9 +952,16 @@ async function init() {
     if (tg) { tg.ready(); tg.expand(); }
 
     const u = tg?.initDataUnsafe?.user;
-    me = u?.id
-        ? { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id }
-        : { id: 999999999, username: 'dev', first_name: 'Dev', last_name: '', chat_id: 999999999 };
+    if (!u?.id) {
+        document.getElementById('splash').innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:40px;text-align:center">
+                <div style="font-size:48px;line-height:1">💊</div>
+                <div style="font-size:20px;font-weight:700;color:var(--text)">WordPill</div>
+                <div style="color:var(--muted);font-size:15px">Откройте приложение через Telegram</div>
+            </div>`;
+        return;
+    }
+    me = { id: u.id, username: u.username||'', first_name: u.first_name||'', last_name: u.last_name||'', chat_id: tg?.initDataUnsafe?.chat?.id || u.id };
 
     // Obtain a signed JWT from the auth edge function so RLS policies work
     if (tg?.initData) {
@@ -1344,6 +1356,10 @@ async function fetchTranslation(word) {
         const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ru`);
         if (!r.ok) return;
         const d = await r.json();
+        if (d?.responseStatus === 429) {
+            if (!translRateLimited) { translRateLimited = true; showToast('Автоперевод недоступен — лимит запросов исчерпан'); }
+            return;
+        }
         const tr = d?.responseData?.translatedText;
         if (tr && tr.toLowerCase() !== word.toLowerCase()) {
             localStorage.setItem(cacheKey, tr);
@@ -1564,6 +1580,7 @@ async function saveSession() {
         cards_total: session.cards.length, cards_correct: session.ok
     });
     if (error) console.warn('saveSession failed', error);
+    statsCache = null; // invalidate so next Stats open shows this session
     incrementGoal(session.ok);
     updateHeader(); renderWords();
 }
@@ -1572,10 +1589,13 @@ async function saveSession() {
 async function renderLibrary() {
     const el = document.getElementById('libraryContent');
 
-    if (!packs.length) {
+    const now = Date.now();
+    if (!packs.length || now - packsLoadedAt > 5 * 60_000) {
         const { data, error } = await db.from('packs').select('*, pack_words(count)').order('id');
         if (error) { el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px">Не удалось загрузить библиотеку</div>`; return; }
         packs = data || [];
+        packsLoadedAt = now;
+        packCache.clear();
     }
 
     el.innerHTML = `
@@ -1592,8 +1612,12 @@ async function renderLibrary() {
 }
 
 async function openPack(packId) {
-    const { data: packWords } = await db.from('pack_words').select('*').eq('pack_id', packId).order('id');
-    currentPackWords = packWords || [];
+    if (!packCache.has(packId)) {
+        const { data } = await db.from('pack_words').select('*').eq('pack_id', packId).order('id');
+        packCache.set(packId, data || []);
+    }
+    const packWords = packCache.get(packId);
+    currentPackWords = packWords;
     const pack = packs.find(p => p.id === packId);
     addedWords = new Set(words.map(w => w.word.toLowerCase()));
 
@@ -1662,10 +1686,16 @@ async function renderStats() {
     const tw = words.reduce((a, w) => a + (w.times_wrong  ||0), 0);
     const rate = tc + tw ? Math.round(tc / (tc + tw) * 100) : 0;
     let sess = [];
-    try {
-        const { data } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5);
-        sess = data || [];
-    } catch {}
+    const now = Date.now();
+    if (statsCache && now - statsCacheTime < 30_000) {
+        sess = statsCache;
+    } else {
+        try {
+            const { data } = await db.from('study_sessions').select('*').eq('user_id', me.id).order('started_at', { ascending: false }).limit(5);
+            sess = data || [];
+            statsCache = sess; statsCacheTime = now;
+        } catch {}
+    }
 
     area.innerHTML = `
         <div class="stats-grid">
