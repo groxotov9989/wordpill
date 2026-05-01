@@ -274,28 +274,6 @@ body::before {
 .search-input:focus { border-color: var(--accent); }
 
 /* ============================================================
-   DAILY GOAL BAR
-   ============================================================ */
-.goal-bar {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 12px;
-}
-.goal-bar-info { flex: 1; min-width: 0; }
-.goal-bar-title {
-    font-size: 13px; font-weight: 700;
-    display: flex; justify-content: space-between; margin-bottom: 6px;
-}
-.goal-bar-count { color: var(--accent); }
-.goal-progress { height: 6px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
-.goal-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    border-radius: 6px; transition: width 0.5s ease;
-}
-.goal-done { color: var(--success); font-size: 13px; font-weight: 700; white-space: nowrap; }
-
-/* ============================================================
    SECTION TITLE
    ============================================================ */
 .section-title {
@@ -742,7 +720,6 @@ body::before {
 
     <!-- Words screen -->
     <div id="screen-words" class="screen active">
-        <div id="goalBar"></div>
         <div class="search-wrap">
             <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" class="search-input" id="searchInput" placeholder="Поиск слов..." autocomplete="off" oninput="onSearch()" inputmode="search" enterkeyhint="search">
@@ -839,10 +816,6 @@ body::before {
                     <div class="rule-icon red"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
                     <span>Пропусти день — серия сгорает</span>
                 </div>
-                <div class="modal-rule">
-                    <div class="rule-icon purple"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-                    <span>Цель: 7, 14, 30 дней подряд</span>
-                </div>
             </div>
             <button class="btn btn-primary" onclick="closeStreakModal()">Понятно</button>
         </div>
@@ -882,7 +855,6 @@ body::before {
 // ── CONFIG ────────────────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
-let dailyGoal = parseInt(localStorage.getItem('daily_goal') || '10');
 
 const { createClient } = supabase;
 let db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1012,7 +984,6 @@ function showApp() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('fabBtn').style.display = 'flex';
     updateHeader();
-    renderGoalBar();
     renderWords();
     if (!(me?.tutorial_completed || localStorage.getItem('tut_done'))) setTimeout(openTutorial, 600);
 }
@@ -1040,14 +1011,12 @@ async function upsertUser() {
                     me.streak_days = winner.streak_days || 1;
                     me.tutorial_completed = winner.tutorial_completed || false;
                     customCats = winner.custom_categories || [];
-                    dailyGoal = winner.daily_goal || 10;
-                    localStorage.setItem('daily_goal', dailyGoal);
                     return false;
                 }
             }
             throw insertErr;
         }
-        me.streak_days = 1; me.tutorial_completed = false; customCats = []; dailyGoal = 10; return true;
+        me.streak_days = 1; me.tutorial_completed = false; customCats = []; return true;
     }
 
     const yest = new Date(); yest.setDate(yest.getDate() - 1);
@@ -1066,8 +1035,6 @@ async function upsertUser() {
     me.streak_days = streak;
     me.tutorial_completed = ex.tutorial_completed || false;
     customCats = ex.custom_categories || [];
-    dailyGoal = ex.daily_goal || 10;
-    localStorage.setItem('daily_goal', dailyGoal);
     return false;
 }
 
@@ -1120,42 +1087,6 @@ function wordStatus(w) {
     if (w.interval_days >= 7 && r >= 0.8) return 'mastered';
     if (r < 0.5) return 'hard';
     return 'learning';
-}
-
-// ── DAILY GOAL ────────────────────────────────────────────────────────────
-function renderGoalBar() {
-    const el = document.getElementById('goalBar');
-    const reviewed = parseInt(localStorage.getItem('goal_' + todayStr()) || '0');
-    const pct = Math.min(100, Math.round(reviewed / dailyGoal * 100));
-    const done = reviewed >= dailyGoal;
-
-    el.innerHTML = `<div class="goal-bar">
-        <div class="goal-bar-info">
-            <div class="goal-bar-title">
-                <span>Цель на сегодня</span>
-                <span class="goal-bar-count">${reviewed}/${dailyGoal}</span>
-            </div>
-            <div class="goal-progress">
-                <div class="goal-progress-fill" style="width:${pct}%"></div>
-            </div>
-        </div>
-        ${done ? '<div class="goal-done">✓ Выполнено!</div>' : ''}
-    </div>`;
-}
-
-function incrementGoal(count) {
-    const key = 'goal_' + todayStr();
-    const cur = parseInt(localStorage.getItem(key) || '0');
-    localStorage.setItem(key, cur + count);
-    renderGoalBar();
-}
-
-function saveDailyGoal(value) {
-    dailyGoal = value;
-    localStorage.setItem('daily_goal', value);
-    db.from('users').update({ daily_goal: value }).eq('id', me.id)
-        .then(({ error }) => { if (error) console.warn('daily_goal save failed', error); });
-    renderGoalBar();
 }
 
 // ── SEARCH ────────────────────────────────────────────────────────────────
@@ -1613,7 +1544,6 @@ async function saveSession() {
         showToast('⚠️ Сессия не сохранена — повторим при следующем запуске');
     }
     statsCache = null; // invalidate so next Stats open shows this session
-    incrementGoal(session.ok);
     updateHeader(); renderWords();
 }
 
