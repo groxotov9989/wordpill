@@ -985,6 +985,7 @@ async function init() {
         isNew = await upsertUser();
         await loadWords();
         await drainAnswerQueue();
+        await drainSessionQueue();
         if (!words.length) await migrate();
     } catch (e) {
         console.error('init error', e);
@@ -1311,13 +1312,15 @@ function cancelEdit() {
     showScreen('words');
 }
 
-async function deleteWord(id) {
+function deleteWord(id) {
     const w = words.find(w => w.id === id);
-    if (!confirm(`Удалить «${w?.word}»?`)) return;
-    const { error } = await db.from('words').delete().eq('id', id);
-    if (error) { showToast('Ошибка удаления'); return; }
-    words = words.filter(w => w.id !== id);
-    updateHeader(); renderWords(); showToast('Слово удалено');
+    tg.showConfirm(`Удалить «${w?.word}»?`, async (confirmed) => {
+        if (!confirmed) return;
+        const { error } = await db.from('words').delete().eq('id', id);
+        if (error) { showToast('Ошибка удаления'); return; }
+        words = words.filter(w => w.id !== id);
+        updateHeader(); renderWords(); showToast('Слово удалено');
+    });
 }
 
 // ── CATEGORY ──────────────────────────────────────────────────────────────
@@ -1347,7 +1350,12 @@ async function addCustomCat() {
     if (!val) return;
     if (customCats.includes(val) || DEFAULT_CATS.find(c => c.label === val)) { showToast('Такая категория уже есть'); return; }
     customCats.push(val);
-    await db.from('users').update({ custom_categories: customCats }).eq('id', me.id);
+    const { error } = await db.from('users').update({ custom_categories: customCats }).eq('id', me.id);
+    if (error) {
+        customCats.pop();
+        showToast('Ошибка сохранения категории');
+        return;
+    }
     document.getElementById('newCatInput').value = '';
     selectCat(val, val);
     showToast('Категория добавлена');
@@ -1593,14 +1601,31 @@ function showResults() {
 }
 
 async function saveSession() {
-    const { error } = await db.from('study_sessions').insert({
+    const payload = {
         user_id: me.id, finished_at: new Date().toISOString(),
         cards_total: session.cards.length, cards_correct: session.ok
-    });
-    if (error) console.warn('saveSession failed', error);
+    };
+    const { error } = await db.from('study_sessions').insert(payload);
+    if (error) {
+        const q = JSON.parse(localStorage.getItem('sessionQueue') || '[]');
+        q.push(payload);
+        localStorage.setItem('sessionQueue', JSON.stringify(q));
+        showToast('⚠️ Сессия не сохранена — повторим при следующем запуске');
+    }
     statsCache = null; // invalidate so next Stats open shows this session
     incrementGoal(session.ok);
     updateHeader(); renderWords();
+}
+
+async function drainSessionQueue() {
+    const q = JSON.parse(localStorage.getItem('sessionQueue') || '[]');
+    if (!q.length) return;
+    const remaining = [];
+    for (const item of q) {
+        const { error } = await db.from('study_sessions').insert(item);
+        if (error) remaining.push(item);
+    }
+    localStorage.setItem('sessionQueue', JSON.stringify(remaining));
 }
 
 // ── LIBRARY (PACKS) ───────────────────────────────────────────────────────

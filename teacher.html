@@ -924,14 +924,14 @@ async function openAddStudent() {
   document.getElementById('studentSearchResults').innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">Загрузка...</div>`;
   openModal('modalAddStudent');
 
-  // Загрузить всех пользователей которые ещё не привязаны ни к какому преподу
+  // Загрузить всех пользователей через SECURITY DEFINER RPC (обходит RLS)
   const { data: allLinked } = await sb.from('teacher_students').select('user_id');
   const linkedIds = new Set((allLinked || []).map(l => l.user_id));
 
   // Ученики уже в моей группе — тоже показываем (чтобы видеть галочку)
   const myIds = new Set(students.map(s => s.id));
 
-  const { data } = await sb.from('users').select('*').order('first_name');
+  const { data } = await sb.rpc('search_users_for_teacher', { p_query: '' });
   // Показываем: своих учеников (с галочкой) + свободных (без привязки)
   allUsers = (data || []).filter(u => myIds.has(u.id) || !linkedIds.has(u.id));
 
@@ -998,16 +998,33 @@ async function addStudentToGroup(userId) {
   toast('✅', `${name} добавлен в группу`);
 }
 
+function showConfirm(message, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:24px;max-width:300px;width:100%;text-align:center">
+      <div style="font-size:15px;font-weight:600;margin-bottom:20px;line-height:1.4">${esc(message)}</div>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-ghost" style="flex:1" id="_cfCancel">Отмена</button>
+        <button class="btn btn-danger-ghost" style="flex:1" id="_cfOk">Удалить</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#_cfCancel').onclick = () => overlay.remove();
+  overlay.querySelector('#_cfOk').onclick = () => { overlay.remove(); onConfirm(); };
+}
+
 async function removeStudent(userId, name) {
-  if (!confirm(`Убрать ${name} из твоей группы?`)) return;
-  const { error } = await sb.from('teacher_students')
-    .delete().eq('teacher_id', teacher.id).eq('user_id', userId);
-  if (error) { toast('❌', 'Ошибка удаления'); return; }
-  students = students.filter(s => s.id !== userId);
-  allUsers = []; // сбросить кеш чтобы при следующем открытии перезагрузился
-  renderStudents();
-  renderStats();
-  toast('🗑️', `${name} убран из группы`);
+  showConfirm(`Убрать ${name} из твоей группы?`, async () => {
+    const { error } = await sb.from('teacher_students')
+      .delete().eq('teacher_id', teacher.id).eq('user_id', userId);
+    if (error) { toast('❌', 'Ошибка удаления'); return; }
+    students = students.filter(s => s.id !== userId);
+    allUsers = []; // сбросить кеш чтобы при следующем открытии перезагрузился
+    renderStudents();
+    renderStats();
+    toast('🗑️', `${name} убран из группы`);
+  });
 }
 
 // ─── EDIT PACK ───
@@ -1074,6 +1091,7 @@ async function doSavePack() {
 
   // 3. Save each row — update existing, insert new
   const rows = document.querySelectorAll('#editWordRows .word-row');
+  let wordErrors = 0;
   for (const row of rows) {
     const en = row.querySelector('.word-en').value.trim();
     const ru = row.querySelector('.word-ru').value.trim();
@@ -1082,29 +1100,34 @@ async function doSavePack() {
 
     if (wid) {
       const { error } = await sb.from('pack_words').update({ word: en, translation: ru }).eq('id', wid);
-      if (error) console.warn('word update failed', wid, error);
+      if (error) wordErrors++;
     } else {
       const { error } = await sb.from('pack_words').insert({ pack_id: editPackId, word: en, translation: ru, category: 'general' });
-      if (error) console.warn('word insert failed', error);
+      if (error) wordErrors++;
     }
   }
 
   deletedWordIds = [];
   closeModal('modalEditPack');
-  toast('✅', 'Пак сохранён');
+  if (wordErrors > 0) {
+    toast('⚠️', `Пак сохранён, но ${wordErrors} слов не удалось обновить`);
+  } else {
+    toast('✅', 'Пак сохранён');
+  }
   await loadPacks();
   renderPacks();
 }
 
 async function doDeletePack() {
-  if (!confirm('Удалить пак полностью? Это действие нельзя отменить.')) return;
-  // pack_words удалятся каскадно через FK
-  const { error } = await sb.from('packs').delete().eq('id', editPackId);
-  if (error) { toast('❌', 'Ошибка удаления'); return; }
-  closeModal('modalEditPack');
-  toast('🗑️', 'Пак удалён');
-  await loadPacks();
-  renderPacks();
+  showConfirm('Удалить пак полностью? Это действие нельзя отменить.', async () => {
+    // pack_words удалятся каскадно через FK
+    const { error } = await sb.from('packs').delete().eq('id', editPackId);
+    if (error) { toast('❌', 'Ошибка удаления'); return; }
+    closeModal('modalEditPack');
+    toast('🗑️', 'Пак удалён');
+    await loadPacks();
+    renderPacks();
+  });
 }
 
 init();
