@@ -663,22 +663,22 @@ async function loadStudents() {
   since.setDate(since.getDate() - 90);
   const sinceStr = since.toISOString();
 
-  // Три запроса параллельно — в 3× быстрее чем последовательно
   const [usersRes, wordCountsRes, sessionsRes] = await Promise.all([
     sb.from('users').select('*').in('id', ids),
-    sb.from('words').select('user_id').in('user_id', ids),
+    sb.rpc('get_student_word_counts', { p_ids: ids }),
     sb.from('study_sessions')
       .select('user_id, cards_correct, cards_total')
       .in('user_id', ids)
       .gte('started_at', sinceStr),
   ]);
 
-  const users      = usersRes.data      || [];
-  const wordCounts = wordCountsRes.data  || [];
-  const sessions   = sessionsRes.data    || [];
+  const users    = usersRes.data    || [];
+  const wcMap    = {};
+  (wordCountsRes.data || []).forEach(r => { wcMap[r.user_id] = r.word_count; });
+  const sessions = sessionsRes.data || [];
 
   students = users.map(u => {
-    const wc = wordCounts.filter(w => w.user_id === u.id).length;
+    const wc = wcMap[u.id] || 0;
     const sess = sessions.filter(s => s.user_id === u.id);
     const totalCorrect = sess.reduce((a, s) => a + (s.cards_correct || 0), 0);
     const totalCards   = sess.reduce((a, s) => a + (s.cards_total   || 0), 0);
@@ -691,10 +691,9 @@ async function loadPacks() {
   const { data } = await sb.from('packs').select('*').order('created_at', { ascending: false });
   packs = data || [];
 
-  // Get word counts per pack
-  const { data: pw } = await sb.from('pack_words').select('pack_id');
+  const { data: pw } = await sb.rpc('get_pack_word_counts');
   packWordCount = {};
-  (pw || []).forEach(p => { packWordCount[p.pack_id] = (packWordCount[p.pack_id] || 0) + 1; });
+  (pw || []).forEach(p => { packWordCount[p.pack_id] = p.word_count; });
 }
 
 // ─── RENDER ───

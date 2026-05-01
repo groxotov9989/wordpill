@@ -1019,7 +1019,14 @@ async function upsertUser() {
             last_name: me.last_name, chat_id: me.chat_id,
             streak_days: 1, last_study_date: today, custom_categories: []
         });
-        if (insertErr) throw insertErr;
+        if (insertErr) {
+            // 23505 = unique_violation: another tab won the race, fetch their row
+            if (insertErr.code === '23505') {
+                const { data: winner } = await db.from('users').select('*').eq('id', me.id).single();
+                if (winner) { me.streak_days = winner.streak_days || 1; customCats = winner.custom_categories || []; return false; }
+            }
+            throw insertErr;
+        }
         me.streak_days = 1; customCats = []; return true;
     }
 
