@@ -1631,10 +1631,10 @@ async function renderLibrary() {
 
 async function openPack(packId) {
     if (!packCache.has(packId)) {
-        const { data } = await db.from('pack_words').select('*').eq('pack_id', packId).order('id');
-        packCache.set(packId, data || []);
+        const { data, error } = await db.from('pack_words').select('*').eq('pack_id', packId).order('id');
+        if (!error) packCache.set(packId, data || []);
     }
-    const packWords = packCache.get(packId);
+    const packWords = packCache.get(packId) || [];
     currentPackWords = packWords;
     const pack = packs.find(p => p.id === packId);
     addedWords = new Set(words.map(w => w.word.toLowerCase()));

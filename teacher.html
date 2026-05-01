@@ -733,7 +733,7 @@ function renderStudents() {
 
     return `
       <div class="student-row" id="sr-${s.id}">
-        <div class="avatar ${color}">${initials}</div>
+        <div class="avatar ${color}">${esc(initials)}</div>
         <div>
           <div class="student-name"><span class="status-dot ${statusClass}"></span>${esc(s.first_name || '')} ${esc(s.last_name || '')}</div>
           <div class="student-handle">@${esc(s.username || '—')}</div>
@@ -764,8 +764,8 @@ function renderPacks() {
     return `
       <div class="pack-card">
         <div class="pack-emoji">${emoji}</div>
-        <div class="pack-title">${p.title}</div>
-        <div class="pack-desc">${p.description || ''}</div>
+        <div class="pack-title">${esc(p.title)}</div>
+        <div class="pack-desc">${esc(p.description || '')}</div>
         <div class="pack-footer">
           <div class="pack-count">${count} слов${isOwn ? ' · Мой пак' : ''}</div>
           <div class="pack-actions">
