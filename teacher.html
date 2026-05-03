@@ -594,8 +594,7 @@ option { background: var(--bg3); }
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
 
-// sb is initialised after JWT is obtained in init()
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const AV_COLORS = ['av-purple','av-green','av-yellow','av-blue','av-red'];
 const PACK_EMOJIS = { anatomy:'🦴', symptoms:'🩺', procedures:'🔬', lab:'🧪', general:'📋' };
@@ -615,24 +614,9 @@ async function init() {
   if (!token) { showError(); return; }
   history.replaceState({}, '', location.pathname);
 
-  // Validate token server-side and get a signed JWT with teacher_id claim
-  let jwt;
-  try {
-    const r = await fetch(`${SUPABASE_URL}/functions/v1/teacher-auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
-    if (!r.ok) { showError(); return; }
-    const body = await r.json();
-    jwt = body.token;
-    teacher = body.teacher;
-  } catch { showError(); return; }
-
-  // Rebuild client with the teacher JWT so RLS policies see teacher_id
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } }
-  });
+  const { data: t, error: te } = await sb.from('teachers').select('*').eq('token', token).single();
+  if (te || !t) { showError(); return; }
+  teacher = t;
 
   document.getElementById('navTeacherName').textContent = teacher.name;
   document.getElementById('stateLoading').style.display = 'none';
