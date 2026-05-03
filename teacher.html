@@ -683,7 +683,7 @@ async function loadStudents() {
 }
 
 async function loadPacks() {
-  const { data } = await sb.from('packs').select('*').order('created_at', { ascending: false });
+  const { data } = await sb.from('packs').select('*').or('teacher_id.is.null,teacher_id.eq.' + teacher.id).order('created_at', { ascending: false });
   packs = data || [];
 
   const { data: pw } = await sb.rpc('get_pack_word_counts');
