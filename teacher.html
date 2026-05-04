@@ -593,9 +593,8 @@ option { background: var(--bg3); }
 const SUPABASE_URL = 'https://sqwnkjpflxskrmwladyn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd25ranBmbHhza3Jtd2xhZHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzY4MzAsImV4cCI6MjA5MjY1MjgzMH0.6jmgEf6aN0yCsr75gqlk2RxjWA2vjsIkhsCiLck4Cws';
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false }
-});
+// sb is created inside init() after token validation, with x-teacher-token header
+let sb;
 
 const AV_COLORS = ['av-purple','av-green','av-yellow','av-blue','av-red'];
 const PACK_EMOJIS = { anatomy:'🦴', symptoms:'🩺', procedures:'🔬', lab:'🧪', general:'📋' };
@@ -626,6 +625,12 @@ async function init() {
   } catch { showError(); return; }
   if (!teacher_row) { showError(); return; }
   teacher = teacher_row;
+
+  // Client with teacher token in every request — RLS policies validate it
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { 'x-teacher-token': token } }
+  });
 
   document.getElementById('navTeacherName').textContent = teacher.name;
   document.getElementById('stateLoading').style.display = 'none';
@@ -760,7 +765,7 @@ function renderPacks() {
         <div class="pack-footer">
           <div class="pack-count">${count} слов${isOwn ? ' · Мой пак' : ''}</div>
           <div class="pack-actions">
-            <button class="btn btn-ghost btn-sm" onclick="openEditPack(${p.id})">Редактировать</button>
+            ${isOwn ? `<button class="btn btn-ghost btn-sm" onclick="openEditPack(${p.id})">Редактировать</button>` : ''}
             <button class="btn btn-primary btn-sm" data-id="${p.id}" data-title="${esc(p.title)}" onclick="openAssign(+this.dataset.id, this.dataset.title)">Назначить</button>
           </div>
         </div>
