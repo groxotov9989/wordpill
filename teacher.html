@@ -659,7 +659,7 @@ async function loadStudents() {
 
   const [usersRes, wordCountsRes, sessionsRes] = await Promise.all([
     sb.from('users').select('*').in('id', ids),
-    sb.rpc('get_student_word_counts', { p_ids: ids }),
+    sb.rpc('get_student_word_counts', { student_ids: ids }),
     sb.from('study_sessions')
       .select('user_id, cards_correct, cards_total')
       .in('user_id', ids)
@@ -729,7 +729,7 @@ function renderStudents() {
         <div class="avatar ${color}">${esc(initials)}</div>
         <div>
           <div class="student-name"><span class="status-dot ${statusClass}"></span>${esc(s.first_name || '')} ${esc(s.last_name || '')}</div>
-          <div class="student-handle">@${esc(s.username || '—')}</div>
+          <div class="student-handle">@${esc(s.username || '—')} · ${s.wordCount} сл.</div>
         </div>
         <div class="progress-cell">
           <div class="progress-pct">${s.accuracy}%</div>
