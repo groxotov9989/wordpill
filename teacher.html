@@ -168,7 +168,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
 }
 .student-row {
   display: grid;
-  grid-template-columns: 44px 1fr 90px 90px 110px 80px;
+  grid-template-columns: 44px 1fr 90px 90px 44px;
   align-items: center; gap: 16px;
   padding: 16px 24px;
   border-bottom: 1px solid var(--border2);
@@ -428,8 +428,7 @@ option { background: var(--bg3); }
           <div>Ученик</div>
           <div>Прогресс</div>
           <div>Серия</div>
-          <div style="text-align:right">Слов</div>
-          <div style="text-align:right"></div>
+          <div></div>
         </div>
         <div id="studentsList"></div>
       </div>
@@ -737,9 +736,7 @@ function renderStudents() {
           <div class="progress-bar-wrap"><div class="progress-bar" style="width:${s.accuracy}%"></div></div>
         </div>
         <div class="${streakClass} streak-cell">${streakText}</div>
-        <div class="words-cell">${s.wordCount}<div class="words-sub">слов</div></div>
-        <div class="assign-btn-cell" style="display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-ghost btn-sm" data-id="${s.id}" data-name="${esc(((s.first_name||'') + ' ' + (s.last_name||'')).trim())}" onclick="openAssignToUser(+this.dataset.id, this.dataset.name)">Пак →</button>
+        <div style="display:flex;justify-content:flex-end">
           <button class="btn btn-danger-ghost btn-sm" data-id="${s.id}" data-name="${esc(((s.first_name||'') + ' ' + (s.last_name||'')).trim())}" onclick="removeStudent(+this.dataset.id, this.dataset.name)">✕</button>
         </div>
       </div>

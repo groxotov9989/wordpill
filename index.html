@@ -311,6 +311,17 @@ body::before {
     transition: transform 0.25s ease; z-index: 1; will-change: transform;
 }
 .word-item-body { flex: 1; min-width: 0; }
+.dots-btn {
+    display: none;
+    background: none; border: none; cursor: pointer;
+    padding: 6px 8px; border-radius: 10px;
+    font-size: 18px; line-height: 1; color: var(--muted);
+    flex-shrink: 0; transition: background .15s, color .15s;
+}
+.dots-btn:hover { background: var(--surface2); color: var(--text); }
+@media (hover: hover) {
+    .swipe-row:hover .dots-btn { display: flex; align-items: center; }
+}
 .word-item-en {
     font-size: 16px; font-weight: 700;
     display: flex; align-items: center; gap: 8px;
@@ -1147,6 +1158,7 @@ function renderWords() {
                             ${tot ? `<span class="word-meta">✓${w.times_correct||0} &nbsp;✗${w.times_wrong||0}</span>` : ''}
                         </div>
                     </div>
+                    <button class="dots-btn" onclick="dotsClick(event,this.closest('.word-item'))">···</button>
                 </div>
             </div>`;
         });
@@ -1181,6 +1193,14 @@ function initSwipe() {
     });
 }
 function closeSwipes() { document.querySelectorAll('.word-item').forEach(i => i.style.transform = ''); activeSwipe = null; }
+function dotsClick(e, item) {
+    e.stopPropagation();
+    const W = 144;
+    const isOpen = item.style.transform === `translateX(-${W}px)`;
+    if (activeSwipe && activeSwipe !== item) { activeSwipe.style.transform = ''; activeSwipe = null; }
+    if (isOpen) { item.style.transform = ''; activeSwipe = null; }
+    else { item.style.transform = `translateX(-${W}px)`; activeSwipe = item; }
+}
 
 // ── WORDS — CRUD ──────────────────────────────────────────────────────────
 async function submitWord() {
