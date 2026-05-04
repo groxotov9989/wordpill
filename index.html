@@ -1586,11 +1586,20 @@ async function renderLibrary() {
 
     const now = Date.now();
     if (!packs.length || now - packsLoadedAt > 5 * 60_000) {
-        const { data, error } = await db.from('packs').select('*, pack_words(count)').order('id');
+        const { data, error } = await db.rpc('get_packs_for_student', { p_user_id: me.id });
         if (error) { el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px">Не удалось загрузить библиотеку</div>`; return; }
         packs = data || [];
         packsLoadedAt = now;
         packCache.clear();
+    }
+
+    if (!packs.length) {
+        el.innerHTML = `
+            <div style="font-size:18px;font-weight:800;margin-bottom:4px">Библиотека</div>
+            <div style="text-align:center;color:var(--muted);padding:60px 20px;font-size:14px;line-height:1.7">
+                Пока ни одного пака не назначено.<br>Попроси преподавателя назначить тебе пак.
+            </div>`;
+        return;
     }
 
     el.innerHTML = `
@@ -1600,7 +1609,7 @@ async function renderLibrary() {
             <div class="pack-card" onclick="openPack(${p.id})">
                 <div class="pack-card-header">
                     <div class="pack-card-title">${esc(p.title)}</div>
-                    <div class="pack-card-count">${p.pack_words[0]?.count || 0} слов</div>
+                    <div class="pack-card-count">${p.word_count || 0} слов</div>
                 </div>
                 <div class="pack-card-desc">${esc(p.description || '')}</div>
             </div>`).join('')}`;
