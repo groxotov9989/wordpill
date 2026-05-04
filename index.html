@@ -312,16 +312,14 @@ body::before {
 }
 .word-item-body { flex: 1; min-width: 0; }
 .dots-btn {
-    display: none;
+    display: flex; align-items: center;
     background: none; border: none; cursor: pointer;
     padding: 6px 8px; border-radius: 10px;
     font-size: 18px; line-height: 1; color: var(--muted);
     flex-shrink: 0; transition: background .15s, color .15s;
+    opacity: 0.4;
 }
-.dots-btn:hover { background: var(--surface2); color: var(--text); }
-@media (hover: hover) {
-    .swipe-row:hover .dots-btn { display: flex; align-items: center; }
-}
+.dots-btn:hover { background: var(--surface2); color: var(--text); opacity: 1; }
 .word-item-en {
     font-size: 16px; font-weight: 700;
     display: flex; align-items: center; gap: 8px;
