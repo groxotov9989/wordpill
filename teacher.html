@@ -642,9 +642,14 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 
 // ─── INIT ───
 async function init() {
-  const token = new URLSearchParams(location.search).get('token');
+  let token = new URLSearchParams(location.search).get('token');
+  if (token) {
+    sessionStorage.setItem('teacher_token', token);
+    history.replaceState({}, '', location.pathname);
+  } else {
+    token = sessionStorage.getItem('teacher_token');
+  }
   if (!token) { showError(); return; }
-  history.replaceState({}, '', location.pathname);
 
   let teacher_row;
   try {
