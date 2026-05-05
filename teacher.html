@@ -882,11 +882,6 @@ async function doCreatePack() {
     return;
   }
 
-  // Auto-assign to own group so students see it immediately
-  await sb.from('pack_assignments').insert({
-    pack_id: pack.id, teacher_id: teacher.id, scope: 'group', user_id: null
-  });
-
   closeModal('modalCreatePack');
   toast('✅', `Пак "${title}" создан (${words.length} слов)`);
   await loadPacks();
