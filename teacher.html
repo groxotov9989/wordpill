@@ -380,6 +380,32 @@ option { background: var(--bg3); }
 
 /* DIVIDER */
 .divider { height: 1px; background: var(--border2); margin: 36px 0; }
+
+/* PACK ASSIGNMENT BADGES */
+.pack-assigned { font-size: 10px; color: var(--muted2); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.pack-assign-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 6px; font-size: 9px; font-weight: 700;
+  background: rgba(168,85,247,.1); color: var(--p); border: 1px solid var(--border);
+}
+.pack-assign-tag-user { background: rgba(52,211,153,.1); color: var(--success); border-color: rgba(52,211,153,.2); }
+.pack-unassigned { font-size: 10px; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+/* ASSIGNMENT LIST IN EDIT MODAL */
+.assignment-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px; background: var(--bg3);
+  border: 1px solid var(--border2); border-radius: 10px; margin-bottom: 6px;
+}
+.assignment-label { font-size: 13px; font-weight: 500; }
+.assignment-remove {
+  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.2);
+  color: var(--danger); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; font-size: 14px; line-height: 1;
+  transition: background .15s;
+}
+.assignment-remove:hover { background: rgba(248,113,113,.2); }
 </style>
 </head>
 <body>
@@ -557,6 +583,11 @@ option { background: var(--bg3); }
       <button class="btn btn-ghost btn-sm" onclick="addEditWordRow()" style="margin-top:8px; width:100%">+ Добавить слово</button>
     </div>
 
+    <div class="form-group" style="margin-top:24px">
+      <label class="form-label">Текущие назначения</label>
+      <div id="editAssignList"></div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-danger-ghost" onclick="doDeletePack()">Удалить пак</button>
       <div style="flex:1"></div>
@@ -605,6 +636,7 @@ let packs = [];
 let assignPackId = null;
 let assignScope = 'group';
 let packWordCount = {};
+let packAssignments = {}; // pack_id -> array of assignment rows
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -690,9 +722,21 @@ async function loadPacks() {
   const { data } = await sb.from('packs').select('*').or('teacher_id.is.null,teacher_id.eq.' + teacher.id).order('created_at', { ascending: false });
   packs = data || [];
 
-  const { data: pw } = await sb.rpc('get_pack_word_counts');
+  const [wcRes, asgRes] = await Promise.all([
+    sb.rpc('get_pack_word_counts'),
+    sb.from('pack_assignments')
+      .select('id, pack_id, scope, user_id, users(first_name, last_name, username)')
+      .eq('teacher_id', teacher.id),
+  ]);
+
   packWordCount = {};
-  (pw || []).forEach(p => { packWordCount[p.pack_id] = p.word_count; });
+  (wcRes.data || []).forEach(p => { packWordCount[p.pack_id] = p.word_count; });
+
+  packAssignments = {};
+  (asgRes.data || []).forEach(a => {
+    if (!packAssignments[a.pack_id]) packAssignments[a.pack_id] = [];
+    packAssignments[a.pack_id].push(a);
+  });
 }
 
 // ─── RENDER ───
@@ -749,6 +793,19 @@ function renderStudents() {
   }).join('');
 }
 
+function assignmentBadges(packId) {
+  const asgns = packAssignments[packId] || [];
+  if (!asgns.length) return `<div class="pack-unassigned">Не назначен</div>`;
+  const tags = asgns.map(a => {
+    if (a.scope === 'school') return `<span class="pack-assign-tag">🏫 Школа</span>`;
+    if (a.scope === 'group') return `<span class="pack-assign-tag">👥 Группа</span>`;
+    const u = a.users;
+    const name = u ? (`${u.first_name||''} ${u.last_name||''}`.trim() || u.username || `ID ${a.user_id}`) : `ID ${a.user_id}`;
+    return `<span class="pack-assign-tag pack-assign-tag-user">👤 ${esc(name)}</span>`;
+  });
+  return `<div class="pack-assigned">${tags.join('')}</div>`;
+}
+
 function renderPacks() {
   const grid = document.getElementById('packsGrid');
   const addCard = `<div class="pack-card-add" onclick="openCreatePack()"><div class="pack-add-icon">＋</div><div class="pack-add-label">Новый пак</div></div>`;
@@ -762,7 +819,8 @@ function renderPacks() {
         <div class="pack-emoji">${emoji}</div>
         <div class="pack-title">${esc(p.title)}</div>
         <div class="pack-desc">${esc(p.description || '')}</div>
-        <div class="pack-footer">
+        ${isOwn ? assignmentBadges(p.id) : ''}
+        <div class="pack-footer" style="margin-top:14px">
           <div class="pack-count">${count} слов${isOwn ? ' · Мой пак' : ''}</div>
           <div class="pack-actions">
             ${isOwn ? `<button class="btn btn-ghost btn-sm" onclick="openEditPack(${p.id})">Редактировать</button>` : ''}
@@ -816,15 +874,16 @@ function populateStudentSelect() {
 async function doAssign() {
   const packId = assignPackId || parseInt(document.getElementById('packSelectInModal').value);
   if (!packId) { toast('❗', 'Сначала выбери пак'); return; }
-  const row = {
-    pack_id: packId,
-    teacher_id: teacher.id,
-    scope: assignScope,
-    user_id: assignScope === 'user' ? parseInt(document.getElementById('studentSelect').value) : null,
-  };
-  const { error } = await sb.from('pack_assignments').insert(row);
+  const userId = assignScope === 'user' ? parseInt(document.getElementById('studentSelect').value) : null;
+  const row = { pack_id: packId, teacher_id: teacher.id, scope: assignScope, user_id: userId };
+  const { data: inserted, error } = await sb.from('pack_assignments').insert(row).select('id, pack_id, scope, user_id, users(first_name, last_name, username)').single();
   if (error) { toast('❌', 'Ошибка при назначении'); return; }
+  if (inserted) {
+    if (!packAssignments[packId]) packAssignments[packId] = [];
+    packAssignments[packId].push(inserted);
+  }
   closeModal('modalAssign');
+  renderPacks();
   const scopeLabels = { school: 'всей школе', group: 'твоей группе', user: 'ученику' };
   toast('✅', `Пак назначен ${scopeLabels[assignScope]}`);
 }
@@ -1046,7 +1105,41 @@ async function openEditPack(packId) {
     addEditWordRow(w.id, w.word, w.translation);
   });
 
+  renderEditAssignments(packId);
   openModal('modalEditPack');
+}
+
+function renderEditAssignments(packId) {
+  const asgns = packAssignments[packId] || [];
+  const el = document.getElementById('editAssignList');
+  if (!asgns.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:4px 0">Пак пока не назначен ни одному ученику.</div>`;
+    return;
+  }
+  el.innerHTML = asgns.map(a => {
+    let label;
+    if (a.scope === 'school') label = '🏫 Вся школа';
+    else if (a.scope === 'group') label = '👥 Вся группа';
+    else {
+      const u = a.users;
+      const name = u ? (`${u.first_name||''} ${u.last_name||''}`.trim() || u.username || `ID ${a.user_id}`) : `ID ${a.user_id}`;
+      label = `👤 ${name}`;
+    }
+    return `
+      <div class="assignment-row">
+        <span class="assignment-label">${esc(label)}</span>
+        <button class="assignment-remove" onclick="removeAssignment(${a.id}, ${packId})" title="Убрать назначение">×</button>
+      </div>`;
+  }).join('');
+}
+
+async function removeAssignment(assignId, packId) {
+  const { error } = await sb.from('pack_assignments').delete().eq('id', assignId);
+  if (error) { toast('❌', 'Ошибка удаления назначения'); return; }
+  packAssignments[packId] = (packAssignments[packId] || []).filter(a => a.id !== assignId);
+  renderEditAssignments(packId);
+  renderPacks();
+  toast('✅', 'Назначение убрано');
 }
 
 function addEditWordRow(wordId = null, en = '', ru = '') {
